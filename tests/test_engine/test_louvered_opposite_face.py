@@ -135,6 +135,67 @@ class TestReportedLeak:
         assert not _blocks(mirrored, _beta_deg(off))
 
 
+class TestOrientationsAndRotationDirection:
+    """The fix holds for any roof orientation and either slat rotation direction.
+
+    On a flat roof the solve depends only on ``gamma`` (sun azimuth minus the
+    facing azimuth), so a roof rotating the other way is the same roof with
+    ``win_azi`` turned 180°. The #1223 roof is one of these; the grid below
+    covers the cardinal and diagonal facings in both directions plus drives
+    with a shorter and a longer travel than 125°, sweeping the whole sky.
+    """
+
+    FACINGS = [0.0, 45.0, 90.0, 122.0, 180.0, 270.0, 302.0, 350.0]
+    SKY = [(azi, elev) for azi in range(0, 360, 15) for elev in range(5, 90, 10)]
+
+    @staticmethod
+    def _leaks(cover) -> bool:
+        beta = _beta_deg(cover)
+        theta = cover.calculate_position()
+        if cover._is_far_side():
+            theta = 180.0 - theta  # far-side sun is realized on the flipped face
+        return not _blocks(theta, beta)
+
+    @staticmethod
+    def _build(facing: float, azi: float, elev: float, *, max_slat: float, fb: bool):
+        cover = _roof(azi, elev, fallback=fb, max_slat_angle=max_slat)
+        cover.config.win_azi = facing
+        return cover
+
+    @pytest.mark.parametrize("max_slat", [100.0, 125.0, 150.0])
+    @pytest.mark.parametrize("facing", FACINGS)
+    def test_fallback_never_leaks(self, facing: float, max_slat: float) -> None:
+        for azi, elev in self.SKY:
+            cover = self._build(facing, azi, elev, max_slat=max_slat, fb=True)
+            if cover.cos_aoi <= 0:
+                continue
+            assert not self._leaks(cover), (facing, max_slat, azi, elev)
+
+    @pytest.mark.parametrize("facing", FACINGS)
+    def test_the_clamp_does_leak_without_it(self, facing: float) -> None:
+        """Guards the test above against passing vacuously."""
+        leaking = 0
+        for azi, elev in self.SKY:
+            cover = self._build(facing, azi, elev, max_slat=125.0, fb=False)
+            if cover.cos_aoi > 0 and self._leaks(cover):
+                leaking += 1
+        assert leaking > 0
+
+    @pytest.mark.parametrize("facing", [122.0, 0.0, 270.0])
+    def test_opposite_rotation_direction_is_a_relabelling(self, facing: float) -> None:
+        """Turn the roof 180° and the sun with it: identical commanded angle."""
+        for azi, elev in self.SKY:
+            a = self._build(facing, azi, elev, max_slat=125.0, fb=True)
+            b = self._build(
+                (facing + 180.0) % 360.0,
+                (azi + 180.0) % 360.0,
+                elev,
+                max_slat=125.0,
+                fb=True,
+            )
+            assert a.calculate_position() == pytest.approx(b.calculate_position())
+
+
 class TestUnchangedWhereNotNeeded:
     """Everywhere outside the leak the fallback is a byte-for-byte no-op."""
 

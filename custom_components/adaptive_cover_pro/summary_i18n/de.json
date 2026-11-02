@@ -312,7 +312,8 @@
     "roof": {
       "pitch": "Dachneigung {v}° von Horizontal",
       "height_above": "{v}m Dach über Fenster (First-Gate)",
-      "max_slat_angle": "max. Lamellenwinkel {v}°"
+      "max_slat_angle": "max. Lamellenwinkel {v}°",
+      "opposite_face_fallback": "schließt am Maximalwinkel von der anderen Seite"
     },
     "sliding": {
       "slide": "schieben: {v}",

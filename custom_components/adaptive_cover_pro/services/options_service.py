@@ -97,6 +97,7 @@ from ..const import (
     CONF_IS_SUNNY_TEMPLATE,
     CONF_IS_SUNNY_TEMPLATE_MODE,
     CONF_LENGTH_AWNING,
+    CONF_LOUVERED_OPPOSITE_FACE_FALLBACK,
     CONF_LUX_ENTITY,
     CONF_LUX_RELEASE_THRESHOLD,
     CONF_LUX_THRESHOLD,
@@ -467,6 +468,7 @@ FIELD_VALIDATORS: dict[str, Any] = {
     # between the "0 = use tilt mode" sentinel and the smallest usable
     # physical angle.
     CONF_MAX_SLAT_ANGLE: _max_slat_angle_v(),
+    CONF_LOUVERED_OPPOSITE_FACE_FALLBACK: _bool_v(),
     # Geometry — sliding curtain shade area (#829, Part 2)
     CONF_SLIDING_ENABLE_SHADE_AREA: _bool_v(),
     CONF_SLIDING_SLIDE_DIRECTION: _select_v(*SLIDING_SLIDE_DIRECTIONS),
@@ -995,7 +997,12 @@ _SECTION_GEOMETRY_OSCILLATING = frozenset(
     }
 )
 _SECTION_GEOMETRY_ROOF = frozenset(
-    {CONF_ROOF_PITCH, CONF_ROOF_HEIGHT_ABOVE, CONF_MAX_SLAT_ANGLE}
+    {
+        CONF_ROOF_PITCH,
+        CONF_ROOF_HEIGHT_ABOVE,
+        CONF_MAX_SLAT_ANGLE,
+        CONF_LOUVERED_OPPOSITE_FACE_FALLBACK,
+    }
 )
 _SECTION_GEOMETRY_SLIDING = frozenset(
     {

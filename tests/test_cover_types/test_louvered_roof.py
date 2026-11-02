@@ -6,6 +6,7 @@ import voluptuous as vol
 import pytest
 
 from custom_components.adaptive_cover_pro.const import (
+    CONF_LOUVERED_OPPOSITE_FACE_FALLBACK,
     CONF_MAX_SLAT_ANGLE,
     CONF_ROOF_PITCH,
     CONF_TILT_DEPTH,
@@ -45,6 +46,16 @@ class TestLouveredRoofConfig:
     def test_from_options_reads_max_slat_angle(self) -> None:
         cfg = LouveredRoofConfig.from_options({CONF_MAX_SLAT_ANGLE: 160})
         assert cfg.max_slat_angle == 160.0
+
+    def test_from_options_defaults_opposite_face_fallback_off(self) -> None:
+        """#1223: opt-in, so existing entries keep the clamp."""
+        assert LouveredRoofConfig.from_options({}).opposite_face_fallback is False
+
+    def test_from_options_reads_opposite_face_fallback(self) -> None:
+        cfg = LouveredRoofConfig.from_options(
+            {CONF_LOUVERED_OPPOSITE_FACE_FALLBACK: True}
+        )
+        assert cfg.opposite_face_fallback is True
 
 
 def _schema_keys(schema: vol.Schema) -> set[str]:
@@ -147,6 +158,23 @@ class TestLouveredRoofPolicy:
     def test_max_slat_angle_defaults_to_zero(self) -> None:
         schema = get_policy(COVER_TYPE).geometry_schema()
         assert _schema_default(schema, CONF_MAX_SLAT_ANGLE) == DEFAULT_MAX_SLAT_ANGLE
+
+    def test_geometry_schema_offers_opposite_face_fallback_off(self) -> None:
+        schema = get_policy(COVER_TYPE).geometry_schema()
+        assert CONF_LOUVERED_OPPOSITE_FACE_FALLBACK in _schema_keys(schema)
+        assert _schema_default(schema, CONF_LOUVERED_OPPOSITE_FACE_FALLBACK) is False
+
+    def test_summary_mentions_opposite_face_fallback_only_when_on(self) -> None:
+        policy = get_policy(COVER_TYPE)
+        base = {CONF_TILT_DEPTH: 22.0, CONF_TILT_DISTANCE: 20.0, CONF_ROOF_PITCH: 0}
+        off = " ".join(policy.summary_geometry_lines(base))
+        on = " ".join(
+            policy.summary_geometry_lines(
+                {**base, CONF_LOUVERED_OPPOSITE_FACE_FALLBACK: True}
+            )
+        )
+        assert "other side" not in off
+        assert "closes from the other side at max angle" in on
 
     def test_geometry_schema_omits_min_reflected_elevation(self) -> None:
         """The reflected-beam floor (#1282) is not offered on a roof plane.

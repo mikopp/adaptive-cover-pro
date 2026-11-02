@@ -95,6 +95,7 @@ GEOMETRY_LABELS_EN: dict[str, str] = {
     "geometry.roof.height_above": "{v}m roof above window (ridge gate)",
     # Louvered roof (#830 follow-up).
     "geometry.roof.max_slat_angle": "max slat angle {v}°",
+    "geometry.roof.opposite_face_fallback": "closes from the other side at max angle",
     # Sliding curtain (#829, Part 2).
     "geometry.sliding.slide": "slide: {v}",
     "geometry.sliding.dir_left": "single (left)",

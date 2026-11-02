@@ -251,6 +251,20 @@ DEFAULT_LOUVERED_ROOF_PITCH = 0  # degrees from horizontal — 0 = flat roof
 # max. When set it becomes BOTH the clamp ceiling AND the tilt%→angle denominator.
 CONF_MAX_SLAT_ANGLE = "max_slat_angle"  # degrees; 0 = use tilt-mode max
 DEFAULT_MAX_SLAT_ANGLE = 0  # 0 sentinel → tilt mode's 90/180
+# Louvered-roof opposite-face fallback at the travel limit (#1223). When the
+# facing-side blocking angle (``90° + i``) lies beyond the drive's reachable
+# maximum, the engine used to clamp to ``max_slat_angle`` — an angle MORE open
+# than the blocking limit, so the direct beam leaked through. With this opt-in
+# toggle on, the engine instead closes the slats from the other face (the most
+# open angle below 90° that still blocks). Default off: existing installs keep
+# the clamp byte-for-byte.
+CONF_LOUVERED_OPPOSITE_FACE_FALLBACK = "louvered_opposite_face_fallback"
+DEFAULT_LOUVERED_OPPOSITE_FACE_FALLBACK = False
+# Switch point below the travel limit, in degrees. The fallback engages once the
+# facing-side angle exceeds ``max − margin`` rather than at the rail itself, so a
+# drive that overshoots or reports late never sits right at the edge of the
+# blocking band. Matches the margin the reporter's YAML automation used.
+LOUVERED_OPPOSITE_FACE_SWITCH_MARGIN_DEG = 5.0
 # Louvered-roof slat geometry defaults (#830 follow-up). Pergola lamellae are
 # far larger than interior venetian slats (whose defaults stay 3.0/2.0 cm), so
 # the louvered schema overrides these two markers only. Values are the #830

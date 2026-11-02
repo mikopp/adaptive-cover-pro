@@ -107,6 +107,7 @@ from .const import (
     CONF_IS_SUNNY_TEMPLATE,
     CONF_IS_SUNNY_TEMPLATE_MODE,
     CONF_LENGTH_AWNING,
+    CONF_LOUVERED_OPPOSITE_FACE_FALLBACK,
     CONF_LUX_ENTITY,
     CONF_LUX_RELEASE_THRESHOLD,
     CONF_LUX_THRESHOLD,
@@ -2047,6 +2048,12 @@ _GEOMETRY_SPECS = _spec(
         SECTION_GEOMETRY,
         ValidatorKind.RANGE,
         rng=const._RANGE_MAX_SLAT_ANGLE,
+    ),
+    # Louvered-roof opposite-face fallback at the travel limit (#1223).
+    FieldSpec(
+        CONF_LOUVERED_OPPOSITE_FACE_FALLBACK,
+        SECTION_GEOMETRY,
+        ValidatorKind.BOOL,
     ),
     # Sliding-curtain shade-area geometry (#829, Part 2). Dynamic selectors are
     # built by the policy's geometry_schema; these specs single-source the

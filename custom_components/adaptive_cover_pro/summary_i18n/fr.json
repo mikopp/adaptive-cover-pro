@@ -312,7 +312,8 @@
     "roof": {
       "pitch": "pente de toit {v}° depuis l'horizontale",
       "height_above": "{v}m de toit au-dessus de la fenêtre (porte de faîtage)",
-      "max_slat_angle": "angle de lamelle max. {v}°"
+      "max_slat_angle": "angle de lamelle max. {v}°",
+      "opposite_face_fallback": "se ferme de l'autre côté à l'angle max."
     },
     "sliding": {
       "slide": "glissement : {v}",

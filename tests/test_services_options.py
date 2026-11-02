@@ -47,6 +47,7 @@ from custom_components.adaptive_cover_pro.const import (
     CONF_MANUAL_OVERRIDE_DURATION,
     CONF_MANUAL_OVERRIDE_RESET,
     CONF_MAX_POSITION,
+    CONF_LOUVERED_OPPOSITE_FACE_FALLBACK,
     CONF_MAX_SLAT_ANGLE,
     CONF_MIN_POSITION,
     CONF_MOTION_MEDIA_PLAYERS,
@@ -326,6 +327,13 @@ class TestFieldValidators:
         from custom_components.adaptive_cover_pro.const import OPTION_RANGES
 
         assert OPTION_RANGES[CONF_MAX_SLAT_ANGLE] == (0, 180)
+
+    def test_louvered_opposite_face_fallback_is_a_bool(self):
+        """#1223: the opt-in toggle validates as a plain bool (or cleared)."""
+        assert FIELD_VALIDATORS[CONF_LOUVERED_OPPOSITE_FACE_FALLBACK](True) is True
+        assert FIELD_VALIDATORS[CONF_LOUVERED_OPPOSITE_FACE_FALLBACK](None) is None
+        with pytest.raises(Exception):
+            FIELD_VALIDATORS[CONF_LOUVERED_OPPOSITE_FACE_FALLBACK]("yes")
 
     def test_max_slat_angle_accepts_none_and_zero_sentinel(self):
         """Issue #1105: None (cleared) and the ``0`` sentinel both pass.

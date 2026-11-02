@@ -468,17 +468,25 @@ class LouveredRoofConfig:
     a pergola drive whose mechanical travel is neither (e.g. 0–160°). ``0`` (the
     default sentinel) keeps the mode's max; a nonzero value becomes BOTH the
     clamp ceiling and the tilt%→angle denominator.
+
+    ``opposite_face_fallback`` (#1223, default off) closes the slats from the
+    other face instead of clamping when the facing-side blocking angle lies
+    beyond ``max_slat_angle`` — see
+    ``AdaptiveLouveredRoofCover._opposite_face_angle``.
     """
 
     roof_pitch: float = 0.0
     max_slat_angle: float = 0.0
+    opposite_face_fallback: bool = False
 
     @classmethod
     def from_options(cls, options: dict) -> LouveredRoofConfig:
         """Build from a config-entry options dict, applying defaults."""
         from .const import (
+            CONF_LOUVERED_OPPOSITE_FACE_FALLBACK,
             CONF_MAX_SLAT_ANGLE,
             CONF_ROOF_PITCH,
+            DEFAULT_LOUVERED_OPPOSITE_FACE_FALLBACK,
             DEFAULT_LOUVERED_ROOF_PITCH,
             DEFAULT_MAX_SLAT_ANGLE,
         )
@@ -495,6 +503,12 @@ class LouveredRoofConfig:
                 float(max_slat)
                 if max_slat is not None
                 else float(DEFAULT_MAX_SLAT_ANGLE)
+            ),
+            opposite_face_fallback=bool(
+                options.get(
+                    CONF_LOUVERED_OPPOSITE_FACE_FALLBACK,
+                    DEFAULT_LOUVERED_OPPOSITE_FACE_FALLBACK,
+                )
             ),
         )
 

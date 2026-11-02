@@ -22,11 +22,13 @@ from homeassistant.helpers import selector
 
 from ..config_types import LouveredRoofConfig
 from ..const import (
+    CONF_LOUVERED_OPPOSITE_FACE_FALLBACK,
     CONF_MAX_SLAT_ANGLE,
     CONF_ROOF_PITCH,
     CONF_TILT_DEPTH,
     CONF_TILT_DISTANCE,
     CONF_TILT_MIN_REFLECTED_ELEVATION,
+    DEFAULT_LOUVERED_OPPOSITE_FACE_FALLBACK,
     DEFAULT_LOUVERED_ROOF_PITCH,
     DEFAULT_LOUVERED_SLAT_DEPTH_CM,
     DEFAULT_LOUVERED_SLAT_DISTANCE_CM,
@@ -106,6 +108,12 @@ def geometry_louvered_roof_schema(hass: HomeAssistant | None = None) -> vol.Sche
     fields[vol.Optional(CONF_MAX_SLAT_ANGLE, default=DEFAULT_MAX_SLAT_ANGLE)] = (
         _max_slat_angle_selector()
     )
+    fields[
+        vol.Optional(
+            CONF_LOUVERED_OPPOSITE_FACE_FALLBACK,
+            default=DEFAULT_LOUVERED_OPPOSITE_FACE_FALLBACK,
+        )
+    ] = selector.BooleanSelector()
     return vol.Schema(fields)
 
 
@@ -204,6 +212,8 @@ class LouveredRoofPolicy(CoverTypePolicy, register=True):
             parts.append(L["geometry.roof.pitch"].format(v=v))
         if m := config.get(CONF_MAX_SLAT_ANGLE):  # 0/None → omit
             parts.append(L["geometry.roof.max_slat_angle"].format(v=m))
+        if config.get(CONF_LOUVERED_OPPOSITE_FACE_FALLBACK):
+            parts.append(L["geometry.roof.opposite_face_fallback"])
         if parts:
             extra = ", ".join(parts)
             if lines:

@@ -300,7 +300,8 @@
     "roof": {
       "pitch": "roof pitch {v}° from horizontal",
       "height_above": "{v}m roof above window (ridge gate)",
-      "max_slat_angle": "max slat angle {v}°"
+      "max_slat_angle": "max slat angle {v}°",
+      "opposite_face_fallback": "closes from the other side at max angle"
     },
     "sliding": {
       "slide": "slide: {v}",

@@ -537,6 +537,25 @@ class AdaptiveTiltCover(AdaptiveGeneralCover):
         """
         return cutoff_angle
 
+    def _opposite_face_angle(
+        self,
+        cutoff_angle: float,  # noqa: ARG002
+        beta_deg: float,  # noqa: ARG002
+        resolved_angle: float,  # noqa: ARG002
+        max_degrees: float,  # noqa: ARG002
+    ) -> float | None:
+        """Alternative slat angle when the resolved one lies past the travel limit.
+
+        Polymorphic hook, consulted after the safety margin and before the
+        travel clamp. Returning an angle replaces the resolved one (the safety
+        margin is then re-applied to it); ``None`` keeps the resolved angle and
+        lets the clamp pin it. Base: ``None`` — on a vertical facade the MODE1
+        clamp identity (see ``calculate_position``) already lands on a blocking
+        position. The louvered-roof engine overrides this to close the slats
+        from the other face instead of clamping into a sun leak (#1223).
+        """
+        return None
+
     def _build_trace(
         self,
         *,
@@ -619,9 +638,10 @@ class AdaptiveTiltCover(AdaptiveGeneralCover):
         # cut-off math is shared with the louvered-roof engine via
         # ``slat_cutoff_angle`` (only ``beta`` and the ``_blocking_depth()`` hook
         # differ between them — the roof widens the depth for interlock overlap).
-        result, discriminant, negative_discriminant = slat_cutoff_angle(
+        cutoff_angle, discriminant, negative_discriminant = slat_cutoff_angle(
             beta, self.slat_distance, self._blocking_depth()
         )
+        result = cutoff_angle
         if negative_discriminant:
             self.logger.debug(
                 "Tilt calc: negative discriminant (%.4f) — returning 0° (closed)",
@@ -689,8 +709,26 @@ class AdaptiveTiltCover(AdaptiveGeneralCover):
         eff_margin = 1.0 + self.tilt_config.safety_margin * (
             (geo_margin - 1.0) + SAFETY_MARGIN_USER_SLACK_MAX
         )
-        if self.tilt_config.safety_margin != 0.0:
-            result = TILT_HORIZONTAL_DEG - (TILT_HORIZONTAL_DEG - result) * eff_margin
+
+        def _with_margin(angle: float) -> float:
+            if self.tilt_config.safety_margin == 0.0:
+                return angle
+            return TILT_HORIZONTAL_DEG - (TILT_HORIZONTAL_DEG - angle) * eff_margin
+
+        result = _with_margin(result)
+        beta_deg = float(np.rad2deg(beta))
+
+        # Opposite-face fallback (#1223), decided on the margin-adjusted angle —
+        # that is the angle the drive would be asked for — and before the floor
+        # and the clamp, so both still apply to whichever face wins. The margin
+        # is re-applied to the replacement: it closes toward 0° on the opposite
+        # face exactly as it closes toward 180° on the facing side.
+        opposite = self._opposite_face_angle(
+            cutoff_angle, beta_deg, result, max_degrees
+        )
+        if opposite is not None:
+            slat_angle_raw_deg = float(opposite)
+            result = _with_margin(slat_angle_raw_deg)
 
         # Reflected-beam floor (issue #1282), applied AFTER the safety margin
         # and BEFORE the travel clamp — the ordering is load-bearing in both
@@ -706,7 +744,6 @@ class AdaptiveTiltCover(AdaptiveGeneralCover):
         # The cap only ever CLOSES the slat, so the direct-sun cut-off survives
         # it — see ``constrain_reflected_beam`` for why the blocking condition
         # is a band rather than a half-line.
-        beta_deg = float(np.rad2deg(beta))
         unfloored = result
         result = constrain_reflected_beam(result, beta_deg, min_reflected)
 

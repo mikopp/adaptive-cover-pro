@@ -260,11 +260,13 @@ DEFAULT_MAX_SLAT_ANGLE = 0  # 0 sentinel → tilt mode's 90/180
 # the clamp byte-for-byte.
 CONF_LOUVERED_OPPOSITE_FACE_FALLBACK = "louvered_opposite_face_fallback"
 DEFAULT_LOUVERED_OPPOSITE_FACE_FALLBACK = False
-# Switch point below the travel limit, in degrees. The fallback engages once the
-# facing-side angle exceeds ``max − margin`` rather than at the rail itself, so a
-# drive that overshoots or reports late never sits right at the edge of the
-# blocking band. Matches the margin the reporter's YAML automation used.
-LOUVERED_OPPOSITE_FACE_SWITCH_MARGIN_DEG = 5.0
+# Switch point below the travel limit, in degrees (configurable). The fallback
+# engages once the facing-side angle exceeds ``max − margin`` rather than at the
+# rail itself, so a drive that overshoots or reports late never sits right at
+# the edge of the blocking band. The default matches the margin the reporter's
+# YAML automation used; 0 switches exactly at the limit.
+CONF_LOUVERED_OPPOSITE_FACE_MARGIN = "louvered_opposite_face_margin"
+DEFAULT_LOUVERED_OPPOSITE_FACE_MARGIN = 5.0  # degrees
 # Louvered-roof slat geometry defaults (#830 follow-up). Pergola lamellae are
 # far larger than interior venetian slats (whose defaults stay 3.0/2.0 cm), so
 # the louvered schema overrides these two markers only. Values are the #830
@@ -2741,6 +2743,7 @@ _RANGE_ROOF_PITCH = (0, 90)  # CONF_ROOF_PITCH, degrees (0=flat, 90=vertical)
 _RANGE_ROOF_HEIGHT_ABOVE = (0.0, 10.0)  # CONF_ROOF_HEIGHT_ABOVE, metres
 # Geometry — louvered roof (#830 follow-up).
 _RANGE_MAX_SLAT_ANGLE = (0, 180)  # CONF_MAX_SLAT_ANGLE, degrees (0 = use tilt mode)
+_RANGE_LOUVERED_OPPOSITE_FACE_MARGIN = (0.0, 20.0)  # degrees below the max angle
 # Smallest nonzero ``max_slat_angle`` treated as a usable physical angle rather
 # than a stray value in the sub-degree dead zone between "unset" and "real"
 # (issue #1105). Single source of truth for the bespoke bound enforced by

@@ -24,7 +24,7 @@ import math
 import pytest
 
 from custom_components.adaptive_cover_pro.const import (
-    LOUVERED_OPPOSITE_FACE_SWITCH_MARGIN_DEG,
+    DEFAULT_LOUVERED_OPPOSITE_FACE_MARGIN,
     TILT_HORIZONTAL_DEG,
 )
 from custom_components.adaptive_cover_pro.engine.covers.louvered_roof import (
@@ -61,6 +61,7 @@ def _roof(
     roof_pitch: float = 0.0,
     safety_margin: float = 0.0,
     mode: str = "mode2",
+    margin: float = DEFAULT_LOUVERED_OPPOSITE_FACE_MARGIN,
 ):
     return build_louvered_roof_cover(
         sol_azi=sol_azi,
@@ -75,6 +76,7 @@ def _roof(
         max_slat_angle=max_slat_angle,
         safety_margin=safety_margin,
         opposite_face_fallback=fallback,
+        opposite_face_margin=margin,
     )
 
 
@@ -144,7 +146,7 @@ class TestUnchangedWhereNotNeeded:
         off = _roof(azi, elev, fallback=False)
         on = _roof(azi, elev, fallback=True)
         expected = off.calculate_position()
-        if expected <= MAX_SLAT - LOUVERED_OPPOSITE_FACE_SWITCH_MARGIN_DEG:
+        if expected <= MAX_SLAT - DEFAULT_LOUVERED_OPPOSITE_FACE_MARGIN:
             assert on.calculate_position() == expected
             assert on._last_calc_details[TRACE_KEY_OPPOSITE_FACE_FALLBACK] is False
 
@@ -169,7 +171,7 @@ class TestUnchangedWhereNotNeeded:
 
 
 class TestSwitchMargin:
-    """The switch fires ``LOUVERED_OPPOSITE_FACE_SWITCH_MARGIN_DEG`` before the rail."""
+    """The switch fires ``DEFAULT_LOUVERED_OPPOSITE_FACE_MARGIN`` before the rail."""
 
     @staticmethod
     def _facing_raw(azi: float, elev: float) -> float:
@@ -180,7 +182,7 @@ class TestSwitchMargin:
     def test_switches_inside_the_margin(self) -> None:
         # 12:40 CEST from the report: raw 123.9°, reachable but within 5° of 125°.
         raw = self._facing_raw(165.7, 65.4)
-        assert MAX_SLAT - LOUVERED_OPPOSITE_FACE_SWITCH_MARGIN_DEG < raw < MAX_SLAT
+        assert MAX_SLAT - DEFAULT_LOUVERED_OPPOSITE_FACE_MARGIN < raw < MAX_SLAT
         cover = _roof(165.7, 65.4, fallback=True)
         assert cover.calculate_position() < TILT_HORIZONTAL_DEG
         assert cover._last_calc_details[TRACE_KEY_OPPOSITE_FACE_FALLBACK] is True
@@ -190,10 +192,48 @@ class TestSwitchMargin:
         assert (
             TILT_HORIZONTAL_DEG
             < raw
-            < (MAX_SLAT - LOUVERED_OPPOSITE_FACE_SWITCH_MARGIN_DEG)
+            < (MAX_SLAT - DEFAULT_LOUVERED_OPPOSITE_FACE_MARGIN)
         )
         cover = _roof(150.0, 60.0, fallback=True)
         assert cover.calculate_position() == pytest.approx(raw)
+
+
+class TestConfigurableMargin:
+    """The switch margin is a parameter (default 5°)."""
+
+    # 12:40 CEST from the report: facing-side raw angle 123.9°, 1.1° below 125°.
+    AZI, ELEV = 165.7, 65.4
+
+    def test_default_is_five_degrees(self) -> None:
+        assert DEFAULT_LOUVERED_OPPOSITE_FACE_MARGIN == 5.0
+
+    def test_margin_below_the_gap_keeps_the_facing_side(self) -> None:
+        cover = _roof(self.AZI, self.ELEV, fallback=True, margin=1.0)
+        assert cover.calculate_position() == pytest.approx(123.9, abs=0.1)
+        assert cover._last_calc_details[TRACE_KEY_OPPOSITE_FACE_FALLBACK] is False
+
+    def test_margin_above_the_gap_switches(self) -> None:
+        cover = _roof(self.AZI, self.ELEV, fallback=True, margin=1.5)
+        assert cover.calculate_position() < TILT_HORIZONTAL_DEG
+        assert cover._last_calc_details[TRACE_KEY_OPPOSITE_FACE_FALLBACK] is True
+
+    def test_zero_margin_still_switches_at_the_limit(self) -> None:
+        """With margin 0 the raw angle past the max (the #1223 leak) still switches."""
+        cover = _roof(187.9, 65.8, fallback=True, margin=0.0)
+        result = cover.calculate_position()
+        assert _blocks(result, _beta_deg(cover))
+        assert cover._last_calc_details[TRACE_KEY_OPPOSITE_FACE_FALLBACK] is True
+
+    def test_zero_margin_keeps_the_exactly_reachable_angle(self) -> None:
+        """An angle at or below the max is left alone when the margin is 0."""
+        cover = _roof(self.AZI, self.ELEV, fallback=True, margin=0.0)
+        assert cover.calculate_position() == pytest.approx(123.9, abs=0.1)
+
+    @pytest.mark.parametrize("margin", [0.0, 2.0, 10.0, 20.0])
+    def test_never_leaks_for_any_margin(self, margin: float) -> None:
+        for azi, elev in LEAK_WINDOW:
+            cover = _roof(azi, elev, fallback=True, margin=margin)
+            assert _blocks(cover.calculate_position(), _beta_deg(cover))
 
 
 class TestInteractions:

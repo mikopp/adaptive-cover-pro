@@ -41,7 +41,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from ...config_types import LouveredRoofConfig
-from ...const import LOUVERED_OPPOSITE_FACE_SWITCH_MARGIN_DEG, TILT_HORIZONTAL_DEG
+from ...const import TILT_HORIZONTAL_DEG
 from .roof_window import (
     TRACE_KEY_COS_AOI,
     TRACE_KEY_ROOF_PITCH_DEG,
@@ -179,8 +179,8 @@ class AdaptiveLouveredRoofCover(AdaptiveTiltCover):
         anchor stays byte-for-byte), on the facing side, when the slats are
         actually inclined past horizontal (``resolved_angle > 90°``, so a
         self-blocking 90° is never swapped for a closed pose), and when that
-        angle exceeds ``max_degrees − LOUVERED_OPPOSITE_FACE_SWITCH_MARGIN_DEG``.
-        The margin keeps the commanded angle off the very edge of the blocking
+        angle exceeds ``max_degrees − opposite_face_margin`` (default 5°,
+        configurable). The margin keeps the commanded angle off the very edge of the blocking
         band, where a late or overshooting drive would leak.
         """
         if not self.roof_config.opposite_face_fallback:
@@ -189,7 +189,7 @@ class AdaptiveLouveredRoofCover(AdaptiveTiltCover):
             return None
         if resolved_angle <= TILT_HORIZONTAL_DEG:
             return None
-        if resolved_angle <= max_degrees - LOUVERED_OPPOSITE_FACE_SWITCH_MARGIN_DEG:
+        if resolved_angle <= max_degrees - self.roof_config.opposite_face_margin:
             return None
         return max(0.0, cutoff_angle - 2.0 * beta_deg)
 

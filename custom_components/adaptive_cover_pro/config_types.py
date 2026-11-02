@@ -472,27 +472,32 @@ class LouveredRoofConfig:
     ``opposite_face_fallback`` (#1223, default off) closes the slats from the
     other face instead of clamping when the facing-side blocking angle lies
     beyond ``max_slat_angle`` — see
-    ``AdaptiveLouveredRoofCover._opposite_face_angle``.
+    ``AdaptiveLouveredRoofCover._opposite_face_angle``. It engages
+    ``opposite_face_margin`` degrees before that limit (default 5°).
     """
 
     roof_pitch: float = 0.0
     max_slat_angle: float = 0.0
     opposite_face_fallback: bool = False
+    opposite_face_margin: float = 5.0
 
     @classmethod
     def from_options(cls, options: dict) -> LouveredRoofConfig:
         """Build from a config-entry options dict, applying defaults."""
         from .const import (
             CONF_LOUVERED_OPPOSITE_FACE_FALLBACK,
+            CONF_LOUVERED_OPPOSITE_FACE_MARGIN,
             CONF_MAX_SLAT_ANGLE,
             CONF_ROOF_PITCH,
             DEFAULT_LOUVERED_OPPOSITE_FACE_FALLBACK,
+            DEFAULT_LOUVERED_OPPOSITE_FACE_MARGIN,
             DEFAULT_LOUVERED_ROOF_PITCH,
             DEFAULT_MAX_SLAT_ANGLE,
         )
 
         pitch = options.get(CONF_ROOF_PITCH)
         max_slat = options.get(CONF_MAX_SLAT_ANGLE)
+        margin = options.get(CONF_LOUVERED_OPPOSITE_FACE_MARGIN)
         return cls(
             roof_pitch=(
                 float(pitch)
@@ -509,6 +514,11 @@ class LouveredRoofConfig:
                     CONF_LOUVERED_OPPOSITE_FACE_FALLBACK,
                     DEFAULT_LOUVERED_OPPOSITE_FACE_FALLBACK,
                 )
+            ),
+            opposite_face_margin=(
+                float(margin)
+                if margin is not None
+                else float(DEFAULT_LOUVERED_OPPOSITE_FACE_MARGIN)
             ),
         )
 

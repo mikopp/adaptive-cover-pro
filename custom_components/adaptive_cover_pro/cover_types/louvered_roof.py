@@ -23,12 +23,14 @@ from homeassistant.helpers import selector
 from ..config_types import LouveredRoofConfig
 from ..const import (
     CONF_LOUVERED_OPPOSITE_FACE_FALLBACK,
+    CONF_LOUVERED_OPPOSITE_FACE_MARGIN,
     CONF_MAX_SLAT_ANGLE,
     CONF_ROOF_PITCH,
     CONF_TILT_DEPTH,
     CONF_TILT_DISTANCE,
     CONF_TILT_MIN_REFLECTED_ELEVATION,
     DEFAULT_LOUVERED_OPPOSITE_FACE_FALLBACK,
+    DEFAULT_LOUVERED_OPPOSITE_FACE_MARGIN,
     DEFAULT_LOUVERED_ROOF_PITCH,
     DEFAULT_LOUVERED_SLAT_DEPTH_CM,
     DEFAULT_LOUVERED_SLAT_DISTANCE_CM,
@@ -54,6 +56,20 @@ if TYPE_CHECKING:
 
     from ..engine.covers import AdaptiveGeneralCover
     from ..services.configuration_service import ConfigurationService
+
+
+def _opposite_face_margin_selector() -> selector.NumberSelector:
+    """Box selector for the opposite-face switch margin below the max angle."""
+    lo, hi = OPTION_RANGES[CONF_LOUVERED_OPPOSITE_FACE_MARGIN]
+    return selector.NumberSelector(
+        selector.NumberSelectorConfig(
+            min=lo,
+            max=hi,
+            step=0.5,
+            mode=selector.NumberSelectorMode.BOX,
+            unit_of_measurement="°",
+        )
+    )
 
 
 def _max_slat_angle_selector() -> selector.NumberSelector:
@@ -114,6 +130,12 @@ def geometry_louvered_roof_schema(hass: HomeAssistant | None = None) -> vol.Sche
             default=DEFAULT_LOUVERED_OPPOSITE_FACE_FALLBACK,
         )
     ] = selector.BooleanSelector()
+    fields[
+        vol.Optional(
+            CONF_LOUVERED_OPPOSITE_FACE_MARGIN,
+            default=DEFAULT_LOUVERED_OPPOSITE_FACE_MARGIN,
+        )
+    ] = _opposite_face_margin_selector()
     return vol.Schema(fields)
 
 

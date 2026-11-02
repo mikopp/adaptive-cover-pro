@@ -7,6 +7,7 @@ import pytest
 
 from custom_components.adaptive_cover_pro.const import (
     CONF_LOUVERED_OPPOSITE_FACE_FALLBACK,
+    CONF_LOUVERED_OPPOSITE_FACE_MARGIN,
     CONF_MAX_SLAT_ANGLE,
     CONF_ROOF_PITCH,
     CONF_TILT_DEPTH,
@@ -56,6 +57,17 @@ class TestLouveredRoofConfig:
             {CONF_LOUVERED_OPPOSITE_FACE_FALLBACK: True}
         )
         assert cfg.opposite_face_fallback is True
+
+    def test_from_options_defaults_opposite_face_margin_to_five(self) -> None:
+        assert LouveredRoofConfig.from_options({}).opposite_face_margin == 5.0
+
+    def test_from_options_reads_opposite_face_margin(self) -> None:
+        cfg = LouveredRoofConfig.from_options({CONF_LOUVERED_OPPOSITE_FACE_MARGIN: 2})
+        assert cfg.opposite_face_margin == 2.0
+
+    def test_from_options_zero_margin_is_not_replaced_by_the_default(self) -> None:
+        cfg = LouveredRoofConfig.from_options({CONF_LOUVERED_OPPOSITE_FACE_MARGIN: 0})
+        assert cfg.opposite_face_margin == 0.0
 
 
 def _schema_keys(schema: vol.Schema) -> set[str]:
@@ -163,6 +175,11 @@ class TestLouveredRoofPolicy:
         schema = get_policy(COVER_TYPE).geometry_schema()
         assert CONF_LOUVERED_OPPOSITE_FACE_FALLBACK in _schema_keys(schema)
         assert _schema_default(schema, CONF_LOUVERED_OPPOSITE_FACE_FALLBACK) is False
+
+    def test_geometry_schema_offers_opposite_face_margin_default_five(self) -> None:
+        schema = get_policy(COVER_TYPE).geometry_schema()
+        assert CONF_LOUVERED_OPPOSITE_FACE_MARGIN in _schema_keys(schema)
+        assert _schema_default(schema, CONF_LOUVERED_OPPOSITE_FACE_MARGIN) == 5.0
 
     def test_summary_mentions_opposite_face_fallback_only_when_on(self) -> None:
         policy = get_policy(COVER_TYPE)

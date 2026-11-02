@@ -48,6 +48,7 @@ from custom_components.adaptive_cover_pro.const import (
     CONF_MANUAL_OVERRIDE_RESET,
     CONF_MAX_POSITION,
     CONF_LOUVERED_OPPOSITE_FACE_FALLBACK,
+    CONF_LOUVERED_OPPOSITE_FACE_MARGIN,
     CONF_MAX_SLAT_ANGLE,
     CONF_MIN_POSITION,
     CONF_MOTION_MEDIA_PLAYERS,
@@ -334,6 +335,15 @@ class TestFieldValidators:
         assert FIELD_VALIDATORS[CONF_LOUVERED_OPPOSITE_FACE_FALLBACK](None) is None
         with pytest.raises(Exception):
             FIELD_VALIDATORS[CONF_LOUVERED_OPPOSITE_FACE_FALLBACK]("yes")
+
+    def test_louvered_opposite_face_margin_range(self):
+        """#1223: the switch margin accepts 0-20 degrees and nothing outside."""
+        v = FIELD_VALIDATORS[CONF_LOUVERED_OPPOSITE_FACE_MARGIN]
+        for ok in (0, 0.5, 5, 20):
+            v(ok)
+        for bad in (-0.5, 20.5):
+            with pytest.raises(Exception):
+                v(bad)
 
     def test_max_slat_angle_accepts_none_and_zero_sentinel(self):
         """Issue #1105: None (cleared) and the ``0`` sentinel both pass.

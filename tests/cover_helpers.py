@@ -296,6 +296,7 @@ def build_louvered_roof_cover(
     safety_margin: float = 0.0,
     min_reflected_elevation: float = 0.0,
     opposite_face_fallback: bool = False,
+    opposite_face_margin: float = 5.0,
 ):
     """Build an AdaptiveLouveredRoofCover at an explicit sun/slat geometry.
 
@@ -323,5 +324,6 @@ def build_louvered_roof_cover(
             roof_pitch=roof_pitch,
             max_slat_angle=max_slat_angle,
             opposite_face_fallback=opposite_face_fallback,
+            opposite_face_margin=opposite_face_margin,
         ),
     )

@@ -1,331 +1,359 @@
 """Opposite-face fallback at the louvered roof's travel limit (#1223).
 
 A louvered roof whose drive turns partway past vertical (``max_slat_angle``
-between 90° and 180°) cannot reach the facing-side blocking angle ``90° + i``
-once it exceeds the maximum. The travel clamp then pins the slats MORE open
-than the blocking limit and the direct beam leaks. With
-``opposite_face_fallback`` on, the engine closes the slats from the other face
-instead (the most open angle below 90° that still blocks, ``cutoff − 2β``).
+between 90° and 180°) cannot reach the facing-side blocking angle once it
+exceeds the maximum. The travel clamp then pins the slats MORE open than the
+blocking limit and the direct beam leaks. With ``opposite_face_fallback`` on,
+the engine closes the slats from the other face instead.
 
-The blocking check here is an independent 2-D slat-shadow model, not the
-engine's cut-off formula: a slat of effective depth ``D`` at angle ``θ`` (from
-horizontal, 90° = vertical) over pivot spacing ``s`` intercepts a facing-side
-ray at profile angle ``β`` (from the roof normal) iff the slat's projection
-perpendicular to the ray covers the gap's, ``D·|cos(θ + β)| ≥ s·cos β``.
+The tests are driven by ``tests/fixtures/louvered_opposite_face_scenarios.json``:
+an array of scenarios, each a roof plus a timeline of sun positions, so a new
+case is a new entry in that file and no new code. Scenario schema::
 
-The reporter's geometry (#1223): flat roof, slat axis 212° → ``win_azi`` 122°,
-slat depth 22 cm, pivot spacing 20 cm, MODE2, ``max_slat_angle`` 125°.
+    {
+      "id": "unique-name",
+      "description": "what this case is about",
+      "roof": {
+        "axis_azimuth": 212,              # direction the slats run (compass deg)
+        "slat_depth_cm": 22, "slat_spacing_cm": 20,
+        "tilt_mode": "mode2", "max_slat_angle": 125,   # 0 = the mode's maximum
+        "opposite_face_fallback": true, "opposite_face_margin": 5.0
+      },
+      "samples": [                         # a timeline, in order
+        {"time": "13:20", "sun_azimuth": 187.9, "sun_elevation": 65.8,
+         "expect": {"branch": "opposite",  # facing | opposite | far | clamped
+                    "angle": 24.55,        # commanded slat angle, degrees
+                    "blocked": true}}      # is the direct sun blocked there
+      ]
+    }
+
+Every scenario runs for BOTH ways the slats can turn. The drive opens toward the
+side the roof faces; for slats along ``axis_azimuth`` that is either
+``axis − 90°`` ("counterclockwise", the #1223 roof: axis 212°, facing 122°) or
+``axis + 90°`` ("clockwise"). The listed sun positions are for the first; for
+the second they are reflected across the slat axis, which is the same situation
+seen in a mirror, so the same expectations apply. The checks per sample:
+
+* **moved at the right time, to the right angle**: the branch and angle at each
+  time match the file (the branch sequence is the timeline of when the slats
+  switch face);
+* **sun blocked**: the independent checker in ``tests/louvered_oracle.py`` says
+  the commanded angle blocks the direct beam (or leaks, for the control
+  scenario that documents the old clamp);
+* **maximally open on either face**: the angle is the most open blocking angle on
+  the face it chose, and a slightly more open angle leaks.
 """
 
 from __future__ import annotations
 
-import math
+import json
+from pathlib import Path
 
 import pytest
 
 from custom_components.adaptive_cover_pro.const import (
     DEFAULT_LOUVERED_OPPOSITE_FACE_MARGIN,
-    TILT_HORIZONTAL_DEG,
 )
 from custom_components.adaptive_cover_pro.engine.covers.louvered_roof import (
     TRACE_KEY_OPPOSITE_FACE_FALLBACK,
 )
 
+from tests import louvered_oracle as oracle
 from tests.cover_helpers import build_louvered_roof_cover
 
 pytestmark = pytest.mark.unit
 
-WIN_AZI = 122.0
-DEPTH = 0.22
-SPACING = 0.20
-MAX_SLAT = 125.0
-# Effective blocking chord for interlocking lamellae (2d − s, #830).
-D_EFF = 2 * DEPTH - SPACING
+SCENARIO_FILE = (
+    Path(__file__).resolve().parents[1]
+    / "fixtures"
+    / "louvered_opposite_face_scenarios.json"
+)
+SCENARIOS = json.loads(SCENARIO_FILE.read_text())
 
-# Summer-solstice sun positions from the #1223 report, ≈47.5° N, where the
-# facing-side solve asks for 129–145°, beyond the 125° travel.
-LEAK_WINDOW = [
-    (176.7, 65.9),
-    (187.9, 65.8),
-    (198.8, 65.0),
-    (208.9, 63.6),
+# Offset from the slat axis to the direction the roof faces.
+DIRECTIONS = {"counterclockwise": -90.0, "clockwise": +90.0}
+
+ANGLE_TOL = 0.05  # engine vs checker: both are exact up to float/bisection error
+FILE_ANGLE_TOL = 0.02  # golden values are stored to two decimals
+OPEN_PROBE_DEG = 0.3  # "slightly more open" for the maximally-open check
+BRANCHES = {"facing", "opposite", "far", "clamped"}
+
+CASES = [
+    pytest.param(sc, name, id=f"{sc['id']}-{name}")
+    for sc in SCENARIOS
+    for name in DIRECTIONS
 ]
 
 
-def _roof(
-    sol_azi: float,
-    sol_elev: float,
-    *,
-    fallback: bool,
-    max_slat_angle: float = MAX_SLAT,
-    roof_pitch: float = 0.0,
-    safety_margin: float = 0.0,
-    mode: str = "mode2",
-    margin: float = DEFAULT_LOUVERED_OPPOSITE_FACE_MARGIN,
-):
+def _facing(roof: dict, direction: str) -> float:
+    return (roof["axis_azimuth"] + DIRECTIONS[direction]) % 360.0
+
+
+def _sun_azimuth(roof: dict, sample: dict, direction: str) -> float:
+    """Return the file's sun azimuth, reflected across the slat axis for 'clockwise'."""
+    az = sample["sun_azimuth"]
+    if direction == "counterclockwise":
+        return az
+    return (2.0 * roof["axis_azimuth"] - az) % 360.0
+
+
+def _engine(roof: dict, sun_az: float, sun_el: float, direction: str):
     return build_louvered_roof_cover(
-        sol_azi=sol_azi,
-        sol_elev=sol_elev,
-        roof_pitch=roof_pitch,
-        slat_distance=SPACING,
-        depth=DEPTH,
-        mode=mode,
-        win_azi=WIN_AZI,
-        fov_left=90.0,
-        fov_right=90.0,
-        max_slat_angle=max_slat_angle,
-        safety_margin=safety_margin,
-        opposite_face_fallback=fallback,
-        opposite_face_margin=margin,
+        sol_azi=sun_az,
+        sol_elev=sun_el,
+        roof_pitch=0.0,
+        slat_distance=roof["slat_spacing_cm"] / 100.0,
+        depth=roof["slat_depth_cm"] / 100.0,
+        mode=roof["tilt_mode"],
+        win_azi=_facing(roof, direction),
+        max_slat_angle=roof["max_slat_angle"],
+        opposite_face_fallback=roof["opposite_face_fallback"],
+        opposite_face_margin=roof["opposite_face_margin"],
     )
 
 
-def _blocks(theta_deg: float, beta_deg: float, *, tol: float = 1e-9) -> bool:
-    """Independent 2-D check: does a slat at ``theta`` block a facing-side ray."""
-    lhs = D_EFF * abs(math.cos(math.radians(theta_deg + beta_deg)))
-    rhs = SPACING * math.cos(math.radians(beta_deg))
-    return lhs + tol >= rhs
+def _limit(roof: dict) -> float:
+    return oracle.travel(roof["tilt_mode"], roof["max_slat_angle"])
 
 
-def _beta_deg(cover) -> float:
-    return math.degrees(cover.beta)
+def _run(roof: dict, sample: dict, direction: str) -> tuple[str, float, object]:
+    """Engine's ``(branch, angle, cover)`` for one sample."""
+    cover = _engine(
+        roof,
+        _sun_azimuth(roof, sample, direction),
+        sample["sun_elevation"],
+        direction,
+    )
+    angle = cover.calculate_position()
+    trace = cover._last_calc_details
+    if trace["louvered_far_side_branch"]:
+        branch = "far"
+    elif trace[TRACE_KEY_OPPOSITE_FACE_FALLBACK]:
+        branch = "opposite"
+    elif angle == pytest.approx(_limit(roof)) and not oracle.blocks(
+        angle,
+        oracle.sun_tangent(
+            _sun_azimuth(roof, sample, direction),
+            sample["sun_elevation"],
+            _facing(roof, direction),
+        ),
+        oracle.effective_depth(roof["slat_depth_cm"], roof["slat_spacing_cm"]),
+        roof["slat_spacing_cm"],
+    ):
+        branch = "clamped"
+    else:
+        branch = "facing"
+    return branch, angle, cover
 
 
-class TestReportedLeak:
-    """The #1223 window: clamp leaks, fallback blocks."""
+def _checker_inputs(roof: dict, sample: dict, direction: str) -> dict:
+    return {
+        "sun_az": _sun_azimuth(roof, sample, direction),
+        "sun_el": sample["sun_elevation"],
+        "facing_az": _facing(roof, direction),
+        "depth": roof["slat_depth_cm"],
+        "spacing": roof["slat_spacing_cm"],
+        "limit": _limit(roof),
+        "fallback": roof["opposite_face_fallback"],
+        "margin": roof["opposite_face_margin"],
+    }
 
-    @pytest.mark.parametrize(("azi", "elev"), LEAK_WINDOW)
-    def test_default_clamps_and_leaks(self, azi: float, elev: float) -> None:
-        cover = _roof(azi, elev, fallback=False)
-        result = cover.calculate_position()
-        assert result == pytest.approx(MAX_SLAT)
-        assert cover._last_calc_details["slat_angle_raw_deg"] > MAX_SLAT
-        assert not _blocks(result, _beta_deg(cover))
-        assert cover._last_calc_details[TRACE_KEY_OPPOSITE_FACE_FALLBACK] is False
 
-    @pytest.mark.parametrize(("azi", "elev"), LEAK_WINDOW)
-    def test_fallback_blocks_from_the_other_face(self, azi: float, elev: float) -> None:
-        cover = _roof(azi, elev, fallback=True)
-        result = cover.calculate_position()
-        beta = _beta_deg(cover)
-        assert 0.0 <= result < TILT_HORIZONTAL_DEG
-        assert _blocks(result, beta)
-        assert cover._last_calc_details[TRACE_KEY_OPPOSITE_FACE_FALLBACK] is True
-        assert cover._last_calc_details["louvered_far_side_branch"] is False
+def _blocks_at(roof: dict, sample: dict, direction: str, angle: float) -> bool:
+    tan_s = oracle.sun_tangent(
+        _sun_azimuth(roof, sample, direction),
+        sample["sun_elevation"],
+        _facing(roof, direction),
+    )
+    return oracle.blocks(
+        angle,
+        tan_s,
+        oracle.effective_depth(roof["slat_depth_cm"], roof["slat_spacing_cm"]),
+        roof["slat_spacing_cm"],
+    )
 
-    @pytest.mark.parametrize(("azi", "elev"), LEAK_WINDOW)
-    def test_fallback_is_the_most_open_blocking_angle(
-        self, azi: float, elev: float
+
+class TestScenarioFile:
+    """The fixture itself: well-formed, and it exercises what it claims to."""
+
+    def test_ids_are_unique(self) -> None:
+        ids = [sc["id"] for sc in SCENARIOS]
+        assert len(ids) == len(set(ids))
+
+    @pytest.mark.parametrize("scenario", SCENARIOS, ids=[s["id"] for s in SCENARIOS])
+    def test_entry_is_well_formed(self, scenario: dict) -> None:
+        assert scenario["description"]
+        assert {
+            "axis_azimuth",
+            "slat_depth_cm",
+            "slat_spacing_cm",
+            "tilt_mode",
+            "max_slat_angle",
+            "opposite_face_fallback",
+            "opposite_face_margin",
+        } <= set(scenario["roof"])
+        assert scenario["samples"]
+        for sample in scenario["samples"]:
+            assert sample["expect"]["branch"] in BRANCHES
+            assert 0.0 <= sample["expect"]["angle"] <= 180.0
+            assert isinstance(sample["expect"]["blocked"], bool)
+
+    def test_fallback_is_exercised_in_both_faces_and_the_control_leaks(self) -> None:
+        branches = {s["expect"]["branch"] for sc in SCENARIOS for s in sc["samples"]}
+        assert branches == BRANCHES
+        control = next(
+            sc for sc in SCENARIOS if not sc["roof"]["opposite_face_fallback"]
+        )
+        assert any(not s["expect"]["blocked"] for s in control["samples"])
+
+
+@pytest.mark.parametrize(("scenario", "direction"), CASES)
+class TestScenarios:
+    """Every scenario in the file, for both ways the slats can turn."""
+
+    def test_slats_move_to_the_right_angle_at_the_right_time(
+        self, scenario: dict, direction: str
     ) -> None:
-        """One degree more open on the opposite face already leaks."""
-        cover = _roof(azi, elev, fallback=True)
-        result = cover.calculate_position()
-        assert not _blocks(result + 1.0, _beta_deg(cover))
+        roof = scenario["roof"]
+        problems: list[str] = []
+        prev_engine = prev_file = None
+        for sample in scenario["samples"]:
+            exp = sample["expect"]
+            branch, angle, _ = _run(roof, sample, direction)
+            if branch != exp["branch"]:
+                problems.append(
+                    f"{sample['time']}: took the {branch} branch, expected {exp['branch']}"
+                )
+            elif abs(angle - exp["angle"]) > max(FILE_ANGLE_TOL, ANGLE_TOL):
+                problems.append(
+                    f"{sample['time']}: commanded {angle:.2f}°, expected {exp['angle']:.2f}°"
+                )
+            if prev_engine is not None:
+                moved = abs(angle - prev_engine) > 0.01
+                should_move = abs(exp["angle"] - prev_file) > 0.01
+                if moved != should_move:
+                    problems.append(
+                        f"{sample['time']}: slats {'moved' if moved else 'stayed'}, "
+                        f"expected them to {'move' if should_move else 'stay'}"
+                    )
+            prev_engine, prev_file = angle, exp["angle"]
+        assert not problems, "\n".join(problems)
 
-    def test_matches_reported_angle(self) -> None:
-        """13:20 CEST: the report's 2-D model gives ≈24.5° on the far face."""
-        cover = _roof(187.9, 65.8, fallback=True)
-        assert cover.calculate_position() == pytest.approx(24.5, abs=0.5)
-
-    def test_not_a_mirror_about_horizontal(self) -> None:
-        """Reflecting the facing angle about 90° would leak on this face."""
-        off = _roof(187.9, 65.8, fallback=False)
-        off.calculate_position()
-        mirrored = 180.0 - off._last_calc_details["slat_angle_raw_deg"]
-        assert not _blocks(mirrored, _beta_deg(off))
-
-
-class TestOrientationsAndRotationDirection:
-    """The fix holds for any roof orientation and either slat rotation direction.
-
-    On a flat roof the solve depends only on ``gamma`` (sun azimuth minus the
-    facing azimuth), so a roof rotating the other way is the same roof with
-    ``win_azi`` turned 180°. The #1223 roof is one of these; the grid below
-    covers the cardinal and diagonal facings in both directions plus drives
-    with a shorter and a longer travel than 125°, sweeping the whole sky.
-    """
-
-    FACINGS = [0.0, 45.0, 90.0, 122.0, 180.0, 270.0, 302.0, 350.0]
-    SKY = [(azi, elev) for azi in range(0, 360, 15) for elev in range(5, 90, 10)]
-
-    @staticmethod
-    def _leaks(cover) -> bool:
-        beta = _beta_deg(cover)
-        theta = cover.calculate_position()
-        if cover._is_far_side():
-            theta = 180.0 - theta  # far-side sun is realized on the flipped face
-        return not _blocks(theta, beta)
-
-    @staticmethod
-    def _build(facing: float, azi: float, elev: float, *, max_slat: float, fb: bool):
-        cover = _roof(azi, elev, fallback=fb, max_slat_angle=max_slat)
-        cover.config.win_azi = facing
-        return cover
-
-    @pytest.mark.parametrize("max_slat", [100.0, 125.0, 150.0])
-    @pytest.mark.parametrize("facing", FACINGS)
-    def test_fallback_never_leaks(self, facing: float, max_slat: float) -> None:
-        for azi, elev in self.SKY:
-            cover = self._build(facing, azi, elev, max_slat=max_slat, fb=True)
-            if cover.cos_aoi <= 0:
-                continue
-            assert not self._leaks(cover), (facing, max_slat, azi, elev)
-
-    @pytest.mark.parametrize("facing", FACINGS)
-    def test_the_clamp_does_leak_without_it(self, facing: float) -> None:
-        """Guards the test above against passing vacuously."""
-        leaking = 0
-        for azi, elev in self.SKY:
-            cover = self._build(facing, azi, elev, max_slat=125.0, fb=False)
-            if cover.cos_aoi > 0 and self._leaks(cover):
-                leaking += 1
-        assert leaking > 0
-
-    @pytest.mark.parametrize("facing", [122.0, 0.0, 270.0])
-    def test_opposite_rotation_direction_is_a_relabelling(self, facing: float) -> None:
-        """Turn the roof 180° and the sun with it: identical commanded angle."""
-        for azi, elev in self.SKY:
-            a = self._build(facing, azi, elev, max_slat=125.0, fb=True)
-            b = self._build(
-                (facing + 180.0) % 360.0,
-                (azi + 180.0) % 360.0,
-                elev,
-                max_slat=125.0,
-                fb=True,
+    def test_direct_sun_is_blocked_where_expected(
+        self, scenario: dict, direction: str
+    ) -> None:
+        roof = scenario["roof"]
+        for sample in scenario["samples"]:
+            _, angle, _ = _run(roof, sample, direction)
+            blocked = _blocks_at(roof, sample, direction, angle)
+            assert blocked == sample["expect"]["blocked"], (
+                f"{sample['time']}: {angle:.2f}° "
+                f"{'blocks' if blocked else 'lets sun through'}"
             )
-            assert a.calculate_position() == pytest.approx(b.calculate_position())
 
-
-class TestUnchangedWhereNotNeeded:
-    """Everywhere outside the leak the fallback is a byte-for-byte no-op."""
-
-    @pytest.mark.parametrize("azi", [90.0, 120.0, 150.0, 230.0, 260.0, 300.0])
-    @pytest.mark.parametrize("elev", [15.0, 35.0, 55.0])
-    def test_reachable_or_far_side_positions_are_identical(
-        self, azi: float, elev: float
+    def test_slats_are_maximally_open_on_the_face_they_chose(
+        self, scenario: dict, direction: str
     ) -> None:
-        off = _roof(azi, elev, fallback=False)
-        on = _roof(azi, elev, fallback=True)
-        expected = off.calculate_position()
-        if expected <= MAX_SLAT - DEFAULT_LOUVERED_OPPOSITE_FACE_MARGIN:
-            assert on.calculate_position() == expected
-            assert on._last_calc_details[TRACE_KEY_OPPOSITE_FACE_FALLBACK] is False
+        roof = scenario["roof"]
+        d_eff = oracle.effective_depth(roof["slat_depth_cm"], roof["slat_spacing_cm"])
+        spacing = roof["slat_spacing_cm"]
+        for sample in scenario["samples"]:
+            branch, angle, _ = _run(roof, sample, direction)
+            tan_s = oracle.sun_tangent(
+                _sun_azimuth(roof, sample, direction),
+                sample["sun_elevation"],
+                _facing(roof, direction),
+            )
+            where = f"{sample['time']} ({branch})"
+            if branch == "clamped":
+                # Out of reach with no fallback: pinned at the limit, which is
+                # not a blocking pose (the leak this feature exists to fix).
+                assert angle == pytest.approx(_limit(roof)), where
+                assert (
+                    oracle.max_open_angle("up", tan_s, d_eff, spacing, _limit(roof))
+                    is None
+                ), where
+                continue
+            face = "up" if branch == "facing" else "down"
+            best = oracle.max_open_angle(face, tan_s, d_eff, spacing, _limit(roof))
+            assert best is not None, where
+            assert angle == pytest.approx(best, abs=ANGLE_TOL), where
+            # A slightly more open pose on the same face would let sun through.
+            if abs(angle - 90.0) > 1e-6:
+                toward_open = angle + (
+                    OPEN_PROBE_DEG if angle < 90.0 else -OPEN_PROBE_DEG
+                )
+                assert not oracle.blocks(toward_open, tan_s, d_eff, spacing), where
 
-    def test_far_side_never_engages(self) -> None:
-        """Afternoon sun past the slat axis already closes from the far face."""
-        off = _roof(230.0, 55.0, fallback=False)
-        on = _roof(230.0, 55.0, fallback=True)
-        assert on._is_far_side()
-        assert on.calculate_position() == off.calculate_position()
-        assert on._last_calc_details[TRACE_KEY_OPPOSITE_FACE_FALLBACK] is False
-
-    def test_vertical_pitch_keeps_venetian_anchor(self) -> None:
-        off = _roof(187.9, 30.0, fallback=False, roof_pitch=90.0)
-        on = _roof(187.9, 30.0, fallback=True, roof_pitch=90.0)
-        assert on.calculate_position() == off.calculate_position()
-
-    def test_default_config_is_off(self) -> None:
-        cover = build_louvered_roof_cover(
-            sol_azi=187.9, sol_elev=65.8, roof_pitch=0.0, max_slat_angle=MAX_SLAT
-        )
-        assert cover.roof_config.opposite_face_fallback is False
+    def test_engine_agrees_with_the_independent_checker(
+        self, scenario: dict, direction: str
+    ) -> None:
+        """Guards the file's golden values against drifting from the physics."""
+        roof = scenario["roof"]
+        for sample in scenario["samples"]:
+            branch, angle, _ = _run(roof, sample, direction)
+            want_branch, want_angle = oracle.expected_pose(
+                **_checker_inputs(roof, sample, direction)
+            )
+            assert branch == want_branch, sample["time"]
+            assert angle == pytest.approx(want_angle, abs=ANGLE_TOL), sample["time"]
 
 
-class TestSwitchMargin:
-    """The switch fires ``DEFAULT_LOUVERED_OPPOSITE_FACE_MARGIN`` before the rail."""
+class TestOutsideTheScenarioSchema:
+    """Behaviour the scenario file does not describe."""
 
     @staticmethod
-    def _facing_raw(azi: float, elev: float) -> float:
-        cover = _roof(azi, elev, fallback=False, max_slat_angle=0.0)
-        cover.calculate_position()
-        return cover._last_calc_details["slat_angle_raw_deg"]
+    def _cover(**kw):
+        defaults = {
+            "sol_azi": 187.9,
+            "sol_elev": 65.8,
+            "roof_pitch": 0.0,
+            "slat_distance": 0.20,
+            "depth": 0.22,
+            "win_azi": 122.0,
+            "max_slat_angle": 125.0,
+        }
+        return build_louvered_roof_cover(**{**defaults, **kw})
 
-    def test_switches_inside_the_margin(self) -> None:
-        # 12:40 CEST from the report: raw 123.9°, reachable but within 5° of 125°.
-        raw = self._facing_raw(165.7, 65.4)
-        assert MAX_SLAT - DEFAULT_LOUVERED_OPPOSITE_FACE_MARGIN < raw < MAX_SLAT
-        cover = _roof(165.7, 65.4, fallback=True)
-        assert cover.calculate_position() < TILT_HORIZONTAL_DEG
-        assert cover._last_calc_details[TRACE_KEY_OPPOSITE_FACE_FALLBACK] is True
-
-    def test_keeps_facing_side_below_the_margin(self) -> None:
-        raw = self._facing_raw(150.0, 60.0)
-        assert (
-            TILT_HORIZONTAL_DEG
-            < raw
-            < (MAX_SLAT - DEFAULT_LOUVERED_OPPOSITE_FACE_MARGIN)
+    def test_off_by_default(self) -> None:
+        cover = self._cover()
+        assert cover.roof_config.opposite_face_fallback is False
+        assert cover.roof_config.opposite_face_margin == (
+            DEFAULT_LOUVERED_OPPOSITE_FACE_MARGIN
         )
-        cover = _roof(150.0, 60.0, fallback=True)
-        assert cover.calculate_position() == pytest.approx(raw)
+        assert cover.calculate_position() == pytest.approx(125.0)
 
-
-class TestConfigurableMargin:
-    """The switch margin is a parameter (default 5°)."""
-
-    # 12:40 CEST from the report: facing-side raw angle 123.9°, 1.1° below 125°.
-    AZI, ELEV = 165.7, 65.4
-
-    def test_default_is_five_degrees(self) -> None:
-        assert DEFAULT_LOUVERED_OPPOSITE_FACE_MARGIN == 5.0
-
-    def test_margin_below_the_gap_keeps_the_facing_side(self) -> None:
-        cover = _roof(self.AZI, self.ELEV, fallback=True, margin=1.0)
-        assert cover.calculate_position() == pytest.approx(123.9, abs=0.1)
-        assert cover._last_calc_details[TRACE_KEY_OPPOSITE_FACE_FALLBACK] is False
-
-    def test_margin_above_the_gap_switches(self) -> None:
-        cover = _roof(self.AZI, self.ELEV, fallback=True, margin=1.5)
-        assert cover.calculate_position() < TILT_HORIZONTAL_DEG
-        assert cover._last_calc_details[TRACE_KEY_OPPOSITE_FACE_FALLBACK] is True
-
-    def test_zero_margin_still_switches_at_the_limit(self) -> None:
-        """With margin 0 the raw angle past the max (the #1223 leak) still switches."""
-        cover = _roof(187.9, 65.8, fallback=True, margin=0.0)
-        result = cover.calculate_position()
-        assert _blocks(result, _beta_deg(cover))
-        assert cover._last_calc_details[TRACE_KEY_OPPOSITE_FACE_FALLBACK] is True
-
-    def test_zero_margin_keeps_the_exactly_reachable_angle(self) -> None:
-        """An angle at or below the max is left alone when the margin is 0."""
-        cover = _roof(self.AZI, self.ELEV, fallback=True, margin=0.0)
-        assert cover.calculate_position() == pytest.approx(123.9, abs=0.1)
-
-    @pytest.mark.parametrize("margin", [0.0, 2.0, 10.0, 20.0])
-    def test_never_leaks_for_any_margin(self, margin: float) -> None:
-        for azi, elev in LEAK_WINDOW:
-            cover = _roof(azi, elev, fallback=True, margin=margin)
-            assert _blocks(cover.calculate_position(), _beta_deg(cover))
-
-
-class TestInteractions:
-    """Safety margin, MODE1 travel, and the self-blocking horizontal."""
+    def test_vertical_pitch_keeps_the_venetian_anchor(self) -> None:
+        off = self._cover(roof_pitch=90.0, sol_elev=30.0)
+        on = self._cover(roof_pitch=90.0, sol_elev=30.0, opposite_face_fallback=True)
+        assert on.calculate_position() == off.calculate_position()
 
     def test_safety_margin_closes_the_opposite_face_further(self) -> None:
-        plain = _roof(187.9, 65.8, fallback=True)
-        margined = _roof(187.9, 65.8, fallback=True, safety_margin=1.0)
+        plain = self._cover(opposite_face_fallback=True)
+        margined = self._cover(opposite_face_fallback=True, safety_margin=1.0)
         plain_angle = plain.calculate_position()
         margined_angle = margined.calculate_position()
         assert margined_angle < plain_angle
-        assert _blocks(margined_angle, _beta_deg(margined))
-        # The raw trace records the unmargined opposite-face angle.
+        # The raw trace records the angle before the safety margin.
         assert margined._last_calc_details["slat_angle_raw_deg"] == pytest.approx(
             plain_angle
         )
+        tan_s = oracle.sun_tangent(187.9, 65.8, 122.0)
+        assert oracle.blocks(margined_angle, tan_s, 24.0, 20.0)
 
-    def test_mode1_roof_closes_instead_of_opening_fully(self) -> None:
-        """A 0–90° louvered drive clamps facing-side sun to 90° (fully open)."""
-        off = _roof(187.9, 65.8, fallback=False, max_slat_angle=0.0, mode="mode1")
-        on = _roof(187.9, 65.8, fallback=True, max_slat_angle=0.0, mode="mode1")
-        assert off.calculate_position() == pytest.approx(90.0)
-        assert not _blocks(90.0, _beta_deg(off))
-        result = on.calculate_position()
-        assert result < TILT_HORIZONTAL_DEG
-        assert _blocks(result, _beta_deg(on))
-
-    def test_self_blocking_horizontal_is_kept(self) -> None:
-        """When 90° already blocks (``i = 0``) the slats stay fully open."""
-        on = _roof(150.0, 20.0, fallback=True, max_slat_angle=0.0, mode="mode1")
-        off = _roof(150.0, 20.0, fallback=False, max_slat_angle=0.0, mode="mode1")
-        assert off.calculate_position() == pytest.approx(90.0)
-        assert on.calculate_position() == pytest.approx(90.0)
-        assert on._last_calc_details[TRACE_KEY_OPPOSITE_FACE_FALLBACK] is False
+    @pytest.mark.parametrize(
+        ("margin", "engaged"),
+        [(0.0, False), (1.0, False), (1.5, True), (5.0, True), (20.0, True)],
+    )
+    def test_margin_is_the_gap_below_the_limit(
+        self, margin: float, engaged: bool
+    ) -> None:
+        """12:40 in #1223: the facing angle (123.9°) is 1.1° below the 125° limit."""
+        cover = self._cover(
+            sol_azi=165.7,
+            sol_elev=65.4,
+            opposite_face_fallback=True,
+            opposite_face_margin=margin,
+        )
+        cover.calculate_position()
+        assert cover._last_calc_details[TRACE_KEY_OPPOSITE_FACE_FALLBACK] is engaged

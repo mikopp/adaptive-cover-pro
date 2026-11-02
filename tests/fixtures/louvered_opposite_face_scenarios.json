@@ -1,0 +1,2942 @@
+[
+  {
+    "id": "reporter-1223-solstice-day",
+    "description": "Issue #1223: slat axis 212 deg, 22/20 cm slats, drive turns to 125 deg, summer solstice at 47.5N. Midday sun along the axis needs more than 125 deg on the facing side, so the roof must close from the other face, then fall into the normal far-side pose once the sun passes the axis.",
+    "roof": {
+      "axis_azimuth": 212,
+      "slat_depth_cm": 22,
+      "slat_spacing_cm": 20,
+      "tilt_mode": "mode2",
+      "max_slat_angle": 125,
+      "opposite_face_fallback": true,
+      "opposite_face_margin": 5.0
+    },
+    "samples": [
+      {
+        "time": "09:00",
+        "sun_azimuth": 94.2,
+        "sun_elevation": 36.4,
+        "expect": {
+          "branch": "facing",
+          "angle": 90.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "10:00",
+        "sun_azimuth": 107.0,
+        "sun_elevation": 46.4,
+        "expect": {
+          "branch": "facing",
+          "angle": 90.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "11:00",
+        "sun_azimuth": 123.4,
+        "sun_elevation": 55.5,
+        "expect": {
+          "branch": "facing",
+          "angle": 98.89,
+          "blocked": true
+        }
+      },
+      {
+        "time": "12:00",
+        "sun_azimuth": 146.5,
+        "sun_elevation": 62.8,
+        "expect": {
+          "branch": "facing",
+          "angle": 113.95,
+          "blocked": true
+        }
+      },
+      {
+        "time": "12:40",
+        "sun_azimuth": 165.7,
+        "sun_elevation": 65.4,
+        "expect": {
+          "branch": "opposite",
+          "angle": 19.4,
+          "blocked": true
+        }
+      },
+      {
+        "time": "13:00",
+        "sun_azimuth": 176.7,
+        "sun_elevation": 65.9,
+        "expect": {
+          "branch": "opposite",
+          "angle": 21.72,
+          "blocked": true
+        }
+      },
+      {
+        "time": "13:20",
+        "sun_azimuth": 187.9,
+        "sun_elevation": 65.8,
+        "expect": {
+          "branch": "opposite",
+          "angle": 24.55,
+          "blocked": true
+        }
+      },
+      {
+        "time": "13:40",
+        "sun_azimuth": 198.8,
+        "sun_elevation": 65.0,
+        "expect": {
+          "branch": "opposite",
+          "angle": 27.96,
+          "blocked": true
+        }
+      },
+      {
+        "time": "14:00",
+        "sun_azimuth": 208.9,
+        "sun_elevation": 63.6,
+        "expect": {
+          "branch": "opposite",
+          "angle": 32.05,
+          "blocked": true
+        }
+      },
+      {
+        "time": "14:20",
+        "sun_azimuth": 218.1,
+        "sun_elevation": 61.8,
+        "expect": {
+          "branch": "far",
+          "angle": 36.96,
+          "blocked": true
+        }
+      },
+      {
+        "time": "15:00",
+        "sun_azimuth": 234.0,
+        "sun_elevation": 56.7,
+        "expect": {
+          "branch": "far",
+          "angle": 49.81,
+          "blocked": true
+        }
+      },
+      {
+        "time": "16:00",
+        "sun_azimuth": 251.1,
+        "sun_elevation": 47.7,
+        "expect": {
+          "branch": "far",
+          "angle": 73.57,
+          "blocked": true
+        }
+      },
+      {
+        "time": "18:00",
+        "sun_azimuth": 275.3,
+        "sun_elevation": 27.7,
+        "expect": {
+          "branch": "far",
+          "angle": 90.0,
+          "blocked": true
+        }
+      }
+    ]
+  },
+  {
+    "id": "reporter-1223-without-fallback",
+    "description": "Same roof and day with the fallback off: the clamp pins the slats at 125 deg and sun leaks through (blocked = false) in the window the fallback fixes.",
+    "roof": {
+      "axis_azimuth": 212,
+      "slat_depth_cm": 22,
+      "slat_spacing_cm": 20,
+      "tilt_mode": "mode2",
+      "max_slat_angle": 125,
+      "opposite_face_fallback": false,
+      "opposite_face_margin": 5.0
+    },
+    "samples": [
+      {
+        "time": "09:00",
+        "sun_azimuth": 94.2,
+        "sun_elevation": 36.4,
+        "expect": {
+          "branch": "facing",
+          "angle": 90.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "10:00",
+        "sun_azimuth": 107.0,
+        "sun_elevation": 46.4,
+        "expect": {
+          "branch": "facing",
+          "angle": 90.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "11:00",
+        "sun_azimuth": 123.4,
+        "sun_elevation": 55.5,
+        "expect": {
+          "branch": "facing",
+          "angle": 98.89,
+          "blocked": true
+        }
+      },
+      {
+        "time": "12:00",
+        "sun_azimuth": 146.5,
+        "sun_elevation": 62.8,
+        "expect": {
+          "branch": "facing",
+          "angle": 113.95,
+          "blocked": true
+        }
+      },
+      {
+        "time": "12:40",
+        "sun_azimuth": 165.7,
+        "sun_elevation": 65.4,
+        "expect": {
+          "branch": "facing",
+          "angle": 123.98,
+          "blocked": true
+        }
+      },
+      {
+        "time": "13:00",
+        "sun_azimuth": 176.7,
+        "sun_elevation": 65.9,
+        "expect": {
+          "branch": "clamped",
+          "angle": 125.0,
+          "blocked": false
+        }
+      },
+      {
+        "time": "13:20",
+        "sun_azimuth": 187.9,
+        "sun_elevation": 65.8,
+        "expect": {
+          "branch": "clamped",
+          "angle": 125.0,
+          "blocked": false
+        }
+      },
+      {
+        "time": "13:40",
+        "sun_azimuth": 198.8,
+        "sun_elevation": 65.0,
+        "expect": {
+          "branch": "clamped",
+          "angle": 125.0,
+          "blocked": false
+        }
+      },
+      {
+        "time": "14:00",
+        "sun_azimuth": 208.9,
+        "sun_elevation": 63.6,
+        "expect": {
+          "branch": "clamped",
+          "angle": 125.0,
+          "blocked": false
+        }
+      },
+      {
+        "time": "14:20",
+        "sun_azimuth": 218.1,
+        "sun_elevation": 61.8,
+        "expect": {
+          "branch": "far",
+          "angle": 36.96,
+          "blocked": true
+        }
+      },
+      {
+        "time": "15:00",
+        "sun_azimuth": 234.0,
+        "sun_elevation": 56.7,
+        "expect": {
+          "branch": "far",
+          "angle": 49.81,
+          "blocked": true
+        }
+      },
+      {
+        "time": "16:00",
+        "sun_azimuth": 251.1,
+        "sun_elevation": 47.7,
+        "expect": {
+          "branch": "far",
+          "angle": 73.57,
+          "blocked": true
+        }
+      },
+      {
+        "time": "18:00",
+        "sun_azimuth": 275.3,
+        "sun_elevation": 27.7,
+        "expect": {
+          "branch": "far",
+          "angle": 90.0,
+          "blocked": true
+        }
+      }
+    ]
+  },
+  {
+    "id": "margin-0-switches-at-the-limit",
+    "description": "Same roof, margin 0: the roof stays on the facing side right up to 125 deg and only switches once the facing angle is unreachable.",
+    "roof": {
+      "axis_azimuth": 212,
+      "slat_depth_cm": 22,
+      "slat_spacing_cm": 20,
+      "tilt_mode": "mode2",
+      "max_slat_angle": 125,
+      "opposite_face_fallback": true,
+      "opposite_face_margin": 0.0
+    },
+    "samples": [
+      {
+        "time": "09:00",
+        "sun_azimuth": 94.2,
+        "sun_elevation": 36.4,
+        "expect": {
+          "branch": "facing",
+          "angle": 90.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "10:00",
+        "sun_azimuth": 107.0,
+        "sun_elevation": 46.4,
+        "expect": {
+          "branch": "facing",
+          "angle": 90.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "11:00",
+        "sun_azimuth": 123.4,
+        "sun_elevation": 55.5,
+        "expect": {
+          "branch": "facing",
+          "angle": 98.89,
+          "blocked": true
+        }
+      },
+      {
+        "time": "12:00",
+        "sun_azimuth": 146.5,
+        "sun_elevation": 62.8,
+        "expect": {
+          "branch": "facing",
+          "angle": 113.95,
+          "blocked": true
+        }
+      },
+      {
+        "time": "12:40",
+        "sun_azimuth": 165.7,
+        "sun_elevation": 65.4,
+        "expect": {
+          "branch": "facing",
+          "angle": 123.98,
+          "blocked": true
+        }
+      },
+      {
+        "time": "13:00",
+        "sun_azimuth": 176.7,
+        "sun_elevation": 65.9,
+        "expect": {
+          "branch": "opposite",
+          "angle": 21.72,
+          "blocked": true
+        }
+      },
+      {
+        "time": "13:20",
+        "sun_azimuth": 187.9,
+        "sun_elevation": 65.8,
+        "expect": {
+          "branch": "opposite",
+          "angle": 24.55,
+          "blocked": true
+        }
+      },
+      {
+        "time": "13:40",
+        "sun_azimuth": 198.8,
+        "sun_elevation": 65.0,
+        "expect": {
+          "branch": "opposite",
+          "angle": 27.96,
+          "blocked": true
+        }
+      },
+      {
+        "time": "14:00",
+        "sun_azimuth": 208.9,
+        "sun_elevation": 63.6,
+        "expect": {
+          "branch": "opposite",
+          "angle": 32.05,
+          "blocked": true
+        }
+      },
+      {
+        "time": "14:20",
+        "sun_azimuth": 218.1,
+        "sun_elevation": 61.8,
+        "expect": {
+          "branch": "far",
+          "angle": 36.96,
+          "blocked": true
+        }
+      },
+      {
+        "time": "15:00",
+        "sun_azimuth": 234.0,
+        "sun_elevation": 56.7,
+        "expect": {
+          "branch": "far",
+          "angle": 49.81,
+          "blocked": true
+        }
+      },
+      {
+        "time": "16:00",
+        "sun_azimuth": 251.1,
+        "sun_elevation": 47.7,
+        "expect": {
+          "branch": "far",
+          "angle": 73.57,
+          "blocked": true
+        }
+      },
+      {
+        "time": "18:00",
+        "sun_azimuth": 275.3,
+        "sun_elevation": 27.7,
+        "expect": {
+          "branch": "far",
+          "angle": 90.0,
+          "blocked": true
+        }
+      }
+    ]
+  },
+  {
+    "id": "margin-10-switches-early",
+    "description": "Same roof, margin 10: the switch fires 10 deg before the limit.",
+    "roof": {
+      "axis_azimuth": 212,
+      "slat_depth_cm": 22,
+      "slat_spacing_cm": 20,
+      "tilt_mode": "mode2",
+      "max_slat_angle": 125,
+      "opposite_face_fallback": true,
+      "opposite_face_margin": 10.0
+    },
+    "samples": [
+      {
+        "time": "09:00",
+        "sun_azimuth": 94.2,
+        "sun_elevation": 36.4,
+        "expect": {
+          "branch": "facing",
+          "angle": 90.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "10:00",
+        "sun_azimuth": 107.0,
+        "sun_elevation": 46.4,
+        "expect": {
+          "branch": "facing",
+          "angle": 90.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "11:00",
+        "sun_azimuth": 123.4,
+        "sun_elevation": 55.5,
+        "expect": {
+          "branch": "facing",
+          "angle": 98.89,
+          "blocked": true
+        }
+      },
+      {
+        "time": "12:00",
+        "sun_azimuth": 146.5,
+        "sun_elevation": 62.8,
+        "expect": {
+          "branch": "facing",
+          "angle": 113.95,
+          "blocked": true
+        }
+      },
+      {
+        "time": "12:40",
+        "sun_azimuth": 165.7,
+        "sun_elevation": 65.4,
+        "expect": {
+          "branch": "opposite",
+          "angle": 19.4,
+          "blocked": true
+        }
+      },
+      {
+        "time": "13:00",
+        "sun_azimuth": 176.7,
+        "sun_elevation": 65.9,
+        "expect": {
+          "branch": "opposite",
+          "angle": 21.72,
+          "blocked": true
+        }
+      },
+      {
+        "time": "13:20",
+        "sun_azimuth": 187.9,
+        "sun_elevation": 65.8,
+        "expect": {
+          "branch": "opposite",
+          "angle": 24.55,
+          "blocked": true
+        }
+      },
+      {
+        "time": "13:40",
+        "sun_azimuth": 198.8,
+        "sun_elevation": 65.0,
+        "expect": {
+          "branch": "opposite",
+          "angle": 27.96,
+          "blocked": true
+        }
+      },
+      {
+        "time": "14:00",
+        "sun_azimuth": 208.9,
+        "sun_elevation": 63.6,
+        "expect": {
+          "branch": "opposite",
+          "angle": 32.05,
+          "blocked": true
+        }
+      },
+      {
+        "time": "14:20",
+        "sun_azimuth": 218.1,
+        "sun_elevation": 61.8,
+        "expect": {
+          "branch": "far",
+          "angle": 36.96,
+          "blocked": true
+        }
+      },
+      {
+        "time": "15:00",
+        "sun_azimuth": 234.0,
+        "sun_elevation": 56.7,
+        "expect": {
+          "branch": "far",
+          "angle": 49.81,
+          "blocked": true
+        }
+      },
+      {
+        "time": "16:00",
+        "sun_azimuth": 251.1,
+        "sun_elevation": 47.7,
+        "expect": {
+          "branch": "far",
+          "angle": 73.57,
+          "blocked": true
+        }
+      },
+      {
+        "time": "18:00",
+        "sun_azimuth": 275.3,
+        "sun_elevation": 27.7,
+        "expect": {
+          "branch": "far",
+          "angle": 90.0,
+          "blocked": true
+        }
+      }
+    ]
+  },
+  {
+    "id": "mode1-90-degree-drive",
+    "description": "A 0-90 deg drive (no max_slat_angle): facing-side sun that needs more than vertical would leave the slats fully open; the roof closes from the other face.",
+    "roof": {
+      "axis_azimuth": 212,
+      "slat_depth_cm": 22,
+      "slat_spacing_cm": 20,
+      "tilt_mode": "mode1",
+      "max_slat_angle": 0,
+      "opposite_face_fallback": true,
+      "opposite_face_margin": 5.0
+    },
+    "samples": [
+      {
+        "time": "09:00",
+        "sun_azimuth": 94.2,
+        "sun_elevation": 36.4,
+        "expect": {
+          "branch": "facing",
+          "angle": 90.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "10:00",
+        "sun_azimuth": 107.0,
+        "sun_elevation": 46.4,
+        "expect": {
+          "branch": "facing",
+          "angle": 90.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "11:00",
+        "sun_azimuth": 123.4,
+        "sun_elevation": 55.5,
+        "expect": {
+          "branch": "opposite",
+          "angle": 12.13,
+          "blocked": true
+        }
+      },
+      {
+        "time": "12:00",
+        "sun_azimuth": 146.5,
+        "sun_elevation": 62.8,
+        "expect": {
+          "branch": "opposite",
+          "angle": 15.92,
+          "blocked": true
+        }
+      },
+      {
+        "time": "12:40",
+        "sun_azimuth": 165.7,
+        "sun_elevation": 65.4,
+        "expect": {
+          "branch": "opposite",
+          "angle": 19.4,
+          "blocked": true
+        }
+      },
+      {
+        "time": "13:00",
+        "sun_azimuth": 176.7,
+        "sun_elevation": 65.9,
+        "expect": {
+          "branch": "opposite",
+          "angle": 21.72,
+          "blocked": true
+        }
+      },
+      {
+        "time": "13:20",
+        "sun_azimuth": 187.9,
+        "sun_elevation": 65.8,
+        "expect": {
+          "branch": "opposite",
+          "angle": 24.55,
+          "blocked": true
+        }
+      },
+      {
+        "time": "13:40",
+        "sun_azimuth": 198.8,
+        "sun_elevation": 65.0,
+        "expect": {
+          "branch": "opposite",
+          "angle": 27.96,
+          "blocked": true
+        }
+      },
+      {
+        "time": "14:00",
+        "sun_azimuth": 208.9,
+        "sun_elevation": 63.6,
+        "expect": {
+          "branch": "opposite",
+          "angle": 32.05,
+          "blocked": true
+        }
+      },
+      {
+        "time": "14:20",
+        "sun_azimuth": 218.1,
+        "sun_elevation": 61.8,
+        "expect": {
+          "branch": "far",
+          "angle": 36.96,
+          "blocked": true
+        }
+      },
+      {
+        "time": "15:00",
+        "sun_azimuth": 234.0,
+        "sun_elevation": 56.7,
+        "expect": {
+          "branch": "far",
+          "angle": 49.81,
+          "blocked": true
+        }
+      },
+      {
+        "time": "16:00",
+        "sun_azimuth": 251.1,
+        "sun_elevation": 47.7,
+        "expect": {
+          "branch": "far",
+          "angle": 73.57,
+          "blocked": true
+        }
+      },
+      {
+        "time": "18:00",
+        "sun_azimuth": 275.3,
+        "sun_elevation": 27.7,
+        "expect": {
+          "branch": "far",
+          "angle": 90.0,
+          "blocked": true
+        }
+      }
+    ]
+  },
+  {
+    "id": "long-travel-160",
+    "description": "A 160 deg drive reaches every facing-side angle needed here, so the fallback never engages.",
+    "roof": {
+      "axis_azimuth": 212,
+      "slat_depth_cm": 22,
+      "slat_spacing_cm": 20,
+      "tilt_mode": "mode2",
+      "max_slat_angle": 160,
+      "opposite_face_fallback": true,
+      "opposite_face_margin": 5.0
+    },
+    "samples": [
+      {
+        "time": "09:00",
+        "sun_azimuth": 94.2,
+        "sun_elevation": 36.4,
+        "expect": {
+          "branch": "facing",
+          "angle": 90.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "10:00",
+        "sun_azimuth": 107.0,
+        "sun_elevation": 46.4,
+        "expect": {
+          "branch": "facing",
+          "angle": 90.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "11:00",
+        "sun_azimuth": 123.4,
+        "sun_elevation": 55.5,
+        "expect": {
+          "branch": "facing",
+          "angle": 98.89,
+          "blocked": true
+        }
+      },
+      {
+        "time": "12:00",
+        "sun_azimuth": 146.5,
+        "sun_elevation": 62.8,
+        "expect": {
+          "branch": "facing",
+          "angle": 113.95,
+          "blocked": true
+        }
+      },
+      {
+        "time": "12:40",
+        "sun_azimuth": 165.7,
+        "sun_elevation": 65.4,
+        "expect": {
+          "branch": "facing",
+          "angle": 123.98,
+          "blocked": true
+        }
+      },
+      {
+        "time": "13:00",
+        "sun_azimuth": 176.7,
+        "sun_elevation": 65.9,
+        "expect": {
+          "branch": "facing",
+          "angle": 129.29,
+          "blocked": true
+        }
+      },
+      {
+        "time": "13:20",
+        "sun_azimuth": 187.9,
+        "sun_elevation": 65.8,
+        "expect": {
+          "branch": "facing",
+          "angle": 134.65,
+          "blocked": true
+        }
+      },
+      {
+        "time": "13:40",
+        "sun_azimuth": 198.8,
+        "sun_elevation": 65.0,
+        "expect": {
+          "branch": "facing",
+          "angle": 139.88,
+          "blocked": true
+        }
+      },
+      {
+        "time": "14:00",
+        "sun_azimuth": 208.9,
+        "sun_elevation": 63.6,
+        "expect": {
+          "branch": "facing",
+          "angle": 144.87,
+          "blocked": true
+        }
+      },
+      {
+        "time": "14:20",
+        "sun_azimuth": 218.1,
+        "sun_elevation": 61.8,
+        "expect": {
+          "branch": "far",
+          "angle": 36.96,
+          "blocked": true
+        }
+      },
+      {
+        "time": "15:00",
+        "sun_azimuth": 234.0,
+        "sun_elevation": 56.7,
+        "expect": {
+          "branch": "far",
+          "angle": 49.81,
+          "blocked": true
+        }
+      },
+      {
+        "time": "16:00",
+        "sun_azimuth": 251.1,
+        "sun_elevation": 47.7,
+        "expect": {
+          "branch": "far",
+          "angle": 73.57,
+          "blocked": true
+        }
+      },
+      {
+        "time": "18:00",
+        "sun_azimuth": 275.3,
+        "sun_elevation": 27.7,
+        "expect": {
+          "branch": "far",
+          "angle": 90.0,
+          "blocked": true
+        }
+      }
+    ]
+  },
+  {
+    "id": "axis-north-south",
+    "description": "Slats run north-south (axis 0): sun swinging through south, at several heights.",
+    "roof": {
+      "axis_azimuth": 0,
+      "slat_depth_cm": 22,
+      "slat_spacing_cm": 20,
+      "tilt_mode": "mode2",
+      "max_slat_angle": 125,
+      "opposite_face_fallback": true,
+      "opposite_face_margin": 5.0
+    },
+    "samples": [
+      {
+        "time": "el45/-88",
+        "sun_azimuth": 272,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "facing",
+          "angle": 90.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el45/-73",
+        "sun_azimuth": 287,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "facing",
+          "angle": 90.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el45/-58",
+        "sun_azimuth": 302,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "facing",
+          "angle": 90.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el45/-43",
+        "sun_azimuth": 317,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "facing",
+          "angle": 99.21,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el45/-28",
+        "sun_azimuth": 332,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "facing",
+          "angle": 113.82,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el45/-13",
+        "sun_azimuth": 347,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "opposite",
+          "angle": 22.93,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el45/+2",
+        "sun_azimuth": 2,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "far",
+          "angle": 35.61,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el45/+17",
+        "sun_azimuth": 17,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "far",
+          "angle": 53.18,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el45/+32",
+        "sun_azimuth": 32,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "far",
+          "angle": 70.5,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el45/+47",
+        "sun_azimuth": 47,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "far",
+          "angle": 83.91,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el45/+62",
+        "sun_azimuth": 62,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "far",
+          "angle": 90.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el45/+77",
+        "sun_azimuth": 77,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "far",
+          "angle": 90.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/-88",
+        "sun_azimuth": 272,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "facing",
+          "angle": 106.22,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/-73",
+        "sun_azimuth": 287,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "facing",
+          "angle": 107.94,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/-58",
+        "sun_azimuth": 302,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "facing",
+          "angle": 112.37,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/-43",
+        "sun_azimuth": 317,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "facing",
+          "angle": 119.35,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/-28",
+        "sun_azimuth": 332,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "opposite",
+          "angle": 21.29,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/-13",
+        "sun_azimuth": 347,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "opposite",
+          "angle": 26.87,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/+2",
+        "sun_azimuth": 2,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "far",
+          "angle": 34.73,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/+17",
+        "sun_azimuth": 17,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "far",
+          "angle": 44.33,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/+32",
+        "sun_azimuth": 32,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "far",
+          "angle": 54.18,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/+47",
+        "sun_azimuth": 47,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "far",
+          "angle": 62.74,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/+62",
+        "sun_azimuth": 62,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "far",
+          "angle": 69.07,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/+77",
+        "sun_azimuth": 77,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "far",
+          "angle": 72.78,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/-88",
+        "sun_azimuth": 272,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "opposite",
+          "angle": 21.4,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/-73",
+        "sun_azimuth": 287,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "opposite",
+          "angle": 21.8,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/-58",
+        "sun_azimuth": 302,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "opposite",
+          "angle": 22.85,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/-43",
+        "sun_azimuth": 317,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "opposite",
+          "angle": 24.58,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/-28",
+        "sun_azimuth": 332,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "opposite",
+          "angle": 27.06,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/-13",
+        "sun_azimuth": 347,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "opposite",
+          "angle": 30.26,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/+2",
+        "sun_azimuth": 2,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "far",
+          "angle": 34.1,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/+17",
+        "sun_azimuth": 17,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "far",
+          "angle": 38.3,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/+32",
+        "sun_azimuth": 32,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "far",
+          "angle": 42.49,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/+47",
+        "sun_azimuth": 47,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "far",
+          "angle": 46.22,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/+62",
+        "sun_azimuth": 62,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "far",
+          "angle": 49.12,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/+77",
+        "sun_azimuth": 77,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "far",
+          "angle": 50.9,
+          "blocked": true
+        }
+      }
+    ]
+  },
+  {
+    "id": "axis-north-south-reversed-axis",
+    "description": "Same north-south slats described by axis 180 (the roof faces the other way).",
+    "roof": {
+      "axis_azimuth": 180,
+      "slat_depth_cm": 22,
+      "slat_spacing_cm": 20,
+      "tilt_mode": "mode2",
+      "max_slat_angle": 125,
+      "opposite_face_fallback": true,
+      "opposite_face_margin": 5.0
+    },
+    "samples": [
+      {
+        "time": "el45/-88",
+        "sun_azimuth": 92,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "facing",
+          "angle": 90.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el45/-73",
+        "sun_azimuth": 107,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "facing",
+          "angle": 90.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el45/-58",
+        "sun_azimuth": 122,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "facing",
+          "angle": 90.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el45/-43",
+        "sun_azimuth": 137,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "facing",
+          "angle": 99.21,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el45/-28",
+        "sun_azimuth": 152,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "facing",
+          "angle": 113.82,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el45/-13",
+        "sun_azimuth": 167,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "opposite",
+          "angle": 22.93,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el45/+2",
+        "sun_azimuth": 182,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "far",
+          "angle": 35.61,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el45/+17",
+        "sun_azimuth": 197,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "far",
+          "angle": 53.18,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el45/+32",
+        "sun_azimuth": 212,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "far",
+          "angle": 70.5,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el45/+47",
+        "sun_azimuth": 227,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "far",
+          "angle": 83.91,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el45/+62",
+        "sun_azimuth": 242,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "far",
+          "angle": 90.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el45/+77",
+        "sun_azimuth": 257,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "far",
+          "angle": 90.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/-88",
+        "sun_azimuth": 92,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "facing",
+          "angle": 106.22,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/-73",
+        "sun_azimuth": 107,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "facing",
+          "angle": 107.94,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/-58",
+        "sun_azimuth": 122,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "facing",
+          "angle": 112.37,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/-43",
+        "sun_azimuth": 137,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "facing",
+          "angle": 119.35,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/-28",
+        "sun_azimuth": 152,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "opposite",
+          "angle": 21.29,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/-13",
+        "sun_azimuth": 167,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "opposite",
+          "angle": 26.87,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/+2",
+        "sun_azimuth": 182,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "far",
+          "angle": 34.73,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/+17",
+        "sun_azimuth": 197,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "far",
+          "angle": 44.33,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/+32",
+        "sun_azimuth": 212,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "far",
+          "angle": 54.18,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/+47",
+        "sun_azimuth": 227,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "far",
+          "angle": 62.74,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/+62",
+        "sun_azimuth": 242,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "far",
+          "angle": 69.07,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/+77",
+        "sun_azimuth": 257,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "far",
+          "angle": 72.78,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/-88",
+        "sun_azimuth": 92,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "opposite",
+          "angle": 21.4,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/-73",
+        "sun_azimuth": 107,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "opposite",
+          "angle": 21.8,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/-58",
+        "sun_azimuth": 122,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "opposite",
+          "angle": 22.85,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/-43",
+        "sun_azimuth": 137,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "opposite",
+          "angle": 24.58,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/-28",
+        "sun_azimuth": 152,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "opposite",
+          "angle": 27.06,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/-13",
+        "sun_azimuth": 167,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "opposite",
+          "angle": 30.26,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/+2",
+        "sun_azimuth": 182,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "far",
+          "angle": 34.1,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/+17",
+        "sun_azimuth": 197,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "far",
+          "angle": 38.3,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/+32",
+        "sun_azimuth": 212,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "far",
+          "angle": 42.49,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/+47",
+        "sun_azimuth": 227,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "far",
+          "angle": 46.22,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/+62",
+        "sun_azimuth": 242,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "far",
+          "angle": 49.12,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/+77",
+        "sun_azimuth": 257,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "far",
+          "angle": 50.9,
+          "blocked": true
+        }
+      }
+    ]
+  },
+  {
+    "id": "axis-east-west",
+    "description": "Slats run east-west (axis 90): sun swinging through east, at several heights.",
+    "roof": {
+      "axis_azimuth": 90,
+      "slat_depth_cm": 22,
+      "slat_spacing_cm": 20,
+      "tilt_mode": "mode2",
+      "max_slat_angle": 125,
+      "opposite_face_fallback": true,
+      "opposite_face_margin": 5.0
+    },
+    "samples": [
+      {
+        "time": "el45/-88",
+        "sun_azimuth": 2,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "facing",
+          "angle": 90.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el45/-73",
+        "sun_azimuth": 17,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "facing",
+          "angle": 90.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el45/-58",
+        "sun_azimuth": 32,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "facing",
+          "angle": 90.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el45/-43",
+        "sun_azimuth": 47,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "facing",
+          "angle": 99.21,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el45/-28",
+        "sun_azimuth": 62,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "facing",
+          "angle": 113.82,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el45/-13",
+        "sun_azimuth": 77,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "opposite",
+          "angle": 22.93,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el45/+2",
+        "sun_azimuth": 92,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "far",
+          "angle": 35.61,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el45/+17",
+        "sun_azimuth": 107,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "far",
+          "angle": 53.18,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el45/+32",
+        "sun_azimuth": 122,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "far",
+          "angle": 70.5,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el45/+47",
+        "sun_azimuth": 137,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "far",
+          "angle": 83.91,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el45/+62",
+        "sun_azimuth": 152,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "far",
+          "angle": 90.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el45/+77",
+        "sun_azimuth": 167,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "far",
+          "angle": 90.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/-88",
+        "sun_azimuth": 2,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "facing",
+          "angle": 106.22,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/-73",
+        "sun_azimuth": 17,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "facing",
+          "angle": 107.94,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/-58",
+        "sun_azimuth": 32,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "facing",
+          "angle": 112.37,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/-43",
+        "sun_azimuth": 47,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "facing",
+          "angle": 119.35,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/-28",
+        "sun_azimuth": 62,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "opposite",
+          "angle": 21.29,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/-13",
+        "sun_azimuth": 77,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "opposite",
+          "angle": 26.87,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/+2",
+        "sun_azimuth": 92,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "far",
+          "angle": 34.73,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/+17",
+        "sun_azimuth": 107,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "far",
+          "angle": 44.33,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/+32",
+        "sun_azimuth": 122,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "far",
+          "angle": 54.18,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/+47",
+        "sun_azimuth": 137,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "far",
+          "angle": 62.74,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/+62",
+        "sun_azimuth": 152,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "far",
+          "angle": 69.07,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/+77",
+        "sun_azimuth": 167,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "far",
+          "angle": 72.78,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/-88",
+        "sun_azimuth": 2,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "opposite",
+          "angle": 21.4,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/-73",
+        "sun_azimuth": 17,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "opposite",
+          "angle": 21.8,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/-58",
+        "sun_azimuth": 32,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "opposite",
+          "angle": 22.85,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/-43",
+        "sun_azimuth": 47,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "opposite",
+          "angle": 24.58,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/-28",
+        "sun_azimuth": 62,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "opposite",
+          "angle": 27.06,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/-13",
+        "sun_azimuth": 77,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "opposite",
+          "angle": 30.26,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/+2",
+        "sun_azimuth": 92,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "far",
+          "angle": 34.1,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/+17",
+        "sun_azimuth": 107,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "far",
+          "angle": 38.3,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/+32",
+        "sun_azimuth": 122,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "far",
+          "angle": 42.49,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/+47",
+        "sun_azimuth": 137,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "far",
+          "angle": 46.22,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/+62",
+        "sun_azimuth": 152,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "far",
+          "angle": 49.12,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/+77",
+        "sun_azimuth": 167,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "far",
+          "angle": 50.9,
+          "blocked": true
+        }
+      }
+    ]
+  },
+  {
+    "id": "axis-diagonal-45",
+    "description": "Slats on a 45 deg diagonal, 100 deg drive.",
+    "roof": {
+      "axis_azimuth": 45,
+      "slat_depth_cm": 22,
+      "slat_spacing_cm": 20,
+      "tilt_mode": "mode2",
+      "max_slat_angle": 100,
+      "opposite_face_fallback": true,
+      "opposite_face_margin": 5.0
+    },
+    "samples": [
+      {
+        "time": "el40/-88",
+        "sun_azimuth": 317,
+        "sun_elevation": 40,
+        "expect": {
+          "branch": "facing",
+          "angle": 90.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el40/-73",
+        "sun_azimuth": 332,
+        "sun_elevation": 40,
+        "expect": {
+          "branch": "facing",
+          "angle": 90.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el40/-58",
+        "sun_azimuth": 347,
+        "sun_elevation": 40,
+        "expect": {
+          "branch": "facing",
+          "angle": 90.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el40/-43",
+        "sun_azimuth": 2,
+        "sun_elevation": 40,
+        "expect": {
+          "branch": "facing",
+          "angle": 91.19,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el40/-28",
+        "sun_azimuth": 17,
+        "sun_elevation": 40,
+        "expect": {
+          "branch": "opposite",
+          "angle": 14.12,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el40/-13",
+        "sun_azimuth": 32,
+        "sun_elevation": 40,
+        "expect": {
+          "branch": "opposite",
+          "angle": 21.39,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el40/+2",
+        "sun_azimuth": 47,
+        "sun_elevation": 40,
+        "expect": {
+          "branch": "far",
+          "angle": 36.01,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el40/+17",
+        "sun_azimuth": 62,
+        "sun_elevation": 40,
+        "expect": {
+          "branch": "far",
+          "angle": 57.31,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el40/+32",
+        "sun_azimuth": 77,
+        "sun_elevation": 40,
+        "expect": {
+          "branch": "far",
+          "angle": 77.48,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el40/+47",
+        "sun_azimuth": 92,
+        "sun_elevation": 40,
+        "expect": {
+          "branch": "far",
+          "angle": 90.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el40/+62",
+        "sun_azimuth": 107,
+        "sun_elevation": 40,
+        "expect": {
+          "branch": "far",
+          "angle": 90.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el40/+77",
+        "sun_azimuth": 122,
+        "sun_elevation": 40,
+        "expect": {
+          "branch": "far",
+          "angle": 90.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el55/-88",
+        "sun_azimuth": 317,
+        "sun_elevation": 55,
+        "expect": {
+          "branch": "opposite",
+          "angle": 11.96,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el55/-73",
+        "sun_azimuth": 332,
+        "sun_elevation": 55,
+        "expect": {
+          "branch": "opposite",
+          "angle": 12.37,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el55/-58",
+        "sun_azimuth": 347,
+        "sun_elevation": 55,
+        "expect": {
+          "branch": "opposite",
+          "angle": 13.53,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el55/-43",
+        "sun_azimuth": 2,
+        "sun_elevation": 55,
+        "expect": {
+          "branch": "opposite",
+          "angle": 15.71,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el55/-28",
+        "sun_azimuth": 17,
+        "sun_elevation": 55,
+        "expect": {
+          "branch": "opposite",
+          "angle": 19.46,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el55/-13",
+        "sun_azimuth": 32,
+        "sun_elevation": 55,
+        "expect": {
+          "branch": "opposite",
+          "angle": 25.64,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el55/+2",
+        "sun_azimuth": 47,
+        "sun_elevation": 55,
+        "expect": {
+          "branch": "far",
+          "angle": 34.98,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el55/+17",
+        "sun_azimuth": 62,
+        "sun_elevation": 55,
+        "expect": {
+          "branch": "far",
+          "angle": 46.84,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el55/+32",
+        "sun_azimuth": 77,
+        "sun_elevation": 55,
+        "expect": {
+          "branch": "far",
+          "angle": 58.98,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el55/+47",
+        "sun_azimuth": 92,
+        "sun_elevation": 55,
+        "expect": {
+          "branch": "far",
+          "angle": 69.24,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el55/+62",
+        "sun_azimuth": 107,
+        "sun_elevation": 55,
+        "expect": {
+          "branch": "far",
+          "angle": 76.59,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el55/+77",
+        "sun_azimuth": 122,
+        "sun_elevation": 55,
+        "expect": {
+          "branch": "far",
+          "angle": 80.8,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el70/-88",
+        "sun_azimuth": 317,
+        "sun_elevation": 70,
+        "expect": {
+          "branch": "opposite",
+          "angle": 18.46,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el70/-73",
+        "sun_azimuth": 332,
+        "sun_elevation": 70,
+        "expect": {
+          "branch": "opposite",
+          "angle": 18.9,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el70/-58",
+        "sun_azimuth": 347,
+        "sun_elevation": 70,
+        "expect": {
+          "branch": "opposite",
+          "angle": 20.07,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el70/-43",
+        "sun_azimuth": 2,
+        "sun_elevation": 70,
+        "expect": {
+          "branch": "opposite",
+          "angle": 22.08,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el70/-28",
+        "sun_azimuth": 17,
+        "sun_elevation": 70,
+        "expect": {
+          "branch": "opposite",
+          "angle": 25.08,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el70/-13",
+        "sun_azimuth": 32,
+        "sun_elevation": 70,
+        "expect": {
+          "branch": "opposite",
+          "angle": 29.16,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el70/+2",
+        "sun_azimuth": 47,
+        "sun_elevation": 70,
+        "expect": {
+          "branch": "far",
+          "angle": 34.29,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el70/+17",
+        "sun_azimuth": 62,
+        "sun_elevation": 70,
+        "expect": {
+          "branch": "far",
+          "angle": 40.11,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el70/+32",
+        "sun_azimuth": 77,
+        "sun_elevation": 70,
+        "expect": {
+          "branch": "far",
+          "angle": 46.01,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el70/+47",
+        "sun_azimuth": 92,
+        "sun_elevation": 70,
+        "expect": {
+          "branch": "far",
+          "angle": 51.27,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el70/+62",
+        "sun_azimuth": 107,
+        "sun_elevation": 70,
+        "expect": {
+          "branch": "far",
+          "angle": 55.31,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el70/+77",
+        "sun_azimuth": 122,
+        "sun_elevation": 70,
+        "expect": {
+          "branch": "far",
+          "angle": 57.77,
+          "blocked": true
+        }
+      }
+    ]
+  },
+  {
+    "id": "wide-slats-narrow-spacing",
+    "description": "Different slat geometry: 30 cm slats at 25 cm spacing, 120 deg drive.",
+    "roof": {
+      "axis_azimuth": 212,
+      "slat_depth_cm": 30,
+      "slat_spacing_cm": 25,
+      "tilt_mode": "mode2",
+      "max_slat_angle": 120,
+      "opposite_face_fallback": true,
+      "opposite_face_margin": 5.0
+    },
+    "samples": [
+      {
+        "time": "el50/-88",
+        "sun_azimuth": 124,
+        "sun_elevation": 50,
+        "expect": {
+          "branch": "facing",
+          "angle": 90.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el50/-73",
+        "sun_azimuth": 139,
+        "sun_elevation": 50,
+        "expect": {
+          "branch": "facing",
+          "angle": 90.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el50/-58",
+        "sun_azimuth": 154,
+        "sun_elevation": 50,
+        "expect": {
+          "branch": "facing",
+          "angle": 90.15,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el50/-43",
+        "sun_azimuth": 169,
+        "sun_elevation": 50,
+        "expect": {
+          "branch": "facing",
+          "angle": 98.53,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el50/-28",
+        "sun_azimuth": 184,
+        "sun_elevation": 50,
+        "expect": {
+          "branch": "facing",
+          "angle": 110.15,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el50/-13",
+        "sun_azimuth": 199,
+        "sun_elevation": 50,
+        "expect": {
+          "branch": "opposite",
+          "angle": 34.73,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el50/+2",
+        "sun_azimuth": 214,
+        "sun_elevation": 50,
+        "expect": {
+          "branch": "far",
+          "angle": 46.12,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el50/+17",
+        "sun_azimuth": 229,
+        "sun_elevation": 50,
+        "expect": {
+          "branch": "far",
+          "angle": 59.86,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el50/+32",
+        "sun_azimuth": 244,
+        "sun_elevation": 50,
+        "expect": {
+          "branch": "far",
+          "angle": 73.23,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el50/+47",
+        "sun_azimuth": 259,
+        "sun_elevation": 50,
+        "expect": {
+          "branch": "far",
+          "angle": 84.03,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el50/+62",
+        "sun_azimuth": 274,
+        "sun_elevation": 50,
+        "expect": {
+          "branch": "far",
+          "angle": 90.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el50/+77",
+        "sun_azimuth": 289,
+        "sun_elevation": 50,
+        "expect": {
+          "branch": "far",
+          "angle": 90.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el65/-88",
+        "sun_azimuth": 124,
+        "sun_elevation": 65,
+        "expect": {
+          "branch": "facing",
+          "angle": 105.36,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el65/-73",
+        "sun_azimuth": 139,
+        "sun_elevation": 65,
+        "expect": {
+          "branch": "facing",
+          "angle": 106.69,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el65/-58",
+        "sun_azimuth": 154,
+        "sun_elevation": 65,
+        "expect": {
+          "branch": "facing",
+          "angle": 110.05,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el65/-43",
+        "sun_azimuth": 169,
+        "sun_elevation": 65,
+        "expect": {
+          "branch": "opposite",
+          "angle": 29.46,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el65/-28",
+        "sun_azimuth": 184,
+        "sun_elevation": 65,
+        "expect": {
+          "branch": "opposite",
+          "angle": 33.4,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el65/-13",
+        "sun_azimuth": 199,
+        "sun_elevation": 65,
+        "expect": {
+          "branch": "opposite",
+          "angle": 38.75,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el65/+2",
+        "sun_azimuth": 214,
+        "sun_elevation": 65,
+        "expect": {
+          "branch": "far",
+          "angle": 45.36,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el65/+17",
+        "sun_azimuth": 229,
+        "sun_elevation": 65,
+        "expect": {
+          "branch": "far",
+          "angle": 52.71,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el65/+32",
+        "sun_azimuth": 244,
+        "sun_elevation": 65,
+        "expect": {
+          "branch": "far",
+          "angle": 59.98,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el65/+47",
+        "sun_azimuth": 259,
+        "sun_elevation": 65,
+        "expect": {
+          "branch": "far",
+          "angle": 66.3,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el65/+62",
+        "sun_azimuth": 274,
+        "sun_elevation": 65,
+        "expect": {
+          "branch": "far",
+          "angle": 71.04,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el65/+77",
+        "sun_azimuth": 289,
+        "sun_elevation": 65,
+        "expect": {
+          "branch": "far",
+          "angle": 73.87,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el80/-88",
+        "sun_azimuth": 124,
+        "sun_elevation": 80,
+        "expect": {
+          "branch": "opposite",
+          "angle": 35.3,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el80/-73",
+        "sun_azimuth": 139,
+        "sun_elevation": 80,
+        "expect": {
+          "branch": "opposite",
+          "angle": 35.65,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el80/-58",
+        "sun_azimuth": 154,
+        "sun_elevation": 80,
+        "expect": {
+          "branch": "opposite",
+          "angle": 36.55,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el80/-43",
+        "sun_azimuth": 169,
+        "sun_elevation": 80,
+        "expect": {
+          "branch": "opposite",
+          "angle": 37.97,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el80/-28",
+        "sun_azimuth": 184,
+        "sun_elevation": 80,
+        "expect": {
+          "branch": "opposite",
+          "angle": 39.88,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el80/-13",
+        "sun_azimuth": 199,
+        "sun_elevation": 80,
+        "expect": {
+          "branch": "opposite",
+          "angle": 42.19,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el80/+2",
+        "sun_azimuth": 214,
+        "sun_elevation": 80,
+        "expect": {
+          "branch": "far",
+          "angle": 44.77,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el80/+17",
+        "sun_azimuth": 229,
+        "sun_elevation": 80,
+        "expect": {
+          "branch": "far",
+          "angle": 47.44,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el80/+32",
+        "sun_azimuth": 244,
+        "sun_elevation": 80,
+        "expect": {
+          "branch": "far",
+          "angle": 50.01,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el80/+47",
+        "sun_azimuth": 259,
+        "sun_elevation": 80,
+        "expect": {
+          "branch": "far",
+          "angle": 52.24,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el80/+62",
+        "sun_azimuth": 274,
+        "sun_elevation": 80,
+        "expect": {
+          "branch": "far",
+          "angle": 53.96,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el80/+77",
+        "sun_azimuth": 289,
+        "sun_elevation": 80,
+        "expect": {
+          "branch": "far",
+          "angle": 55.0,
+          "blocked": true
+        }
+      }
+    ]
+  },
+  {
+    "id": "slats-exactly-touching",
+    "description": "Slats as wide as their spacing (20 cm at 20 cm): no interlock overlap, so the nominal chord applies. 135 deg drive.",
+    "roof": {
+      "axis_azimuth": 212,
+      "slat_depth_cm": 20,
+      "slat_spacing_cm": 20,
+      "tilt_mode": "mode2",
+      "max_slat_angle": 135,
+      "opposite_face_fallback": true,
+      "opposite_face_margin": 5.0
+    },
+    "samples": [
+      {
+        "time": "el45/-58",
+        "sun_azimuth": 154,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "facing",
+          "angle": 99.4,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el45/-38",
+        "sun_azimuth": 174,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "facing",
+          "angle": 116.76,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el45/-18",
+        "sun_azimuth": 194,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "opposite",
+          "angle": 0.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el45/+2",
+        "sun_azimuth": 214,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "far",
+          "angle": 4.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el45/+22",
+        "sun_azimuth": 234,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "far",
+          "angle": 41.07,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el45/+42",
+        "sun_azimuth": 254,
+        "sun_elevation": 45,
+        "expect": {
+          "branch": "far",
+          "angle": 67.58,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/-58",
+        "sun_azimuth": 154,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "facing",
+          "angle": 127.83,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/-38",
+        "sun_azimuth": 174,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "opposite",
+          "angle": 0.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/-18",
+        "sun_azimuth": 194,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "opposite",
+          "angle": 0.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/+2",
+        "sun_azimuth": 214,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "far",
+          "angle": 2.31,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/+22",
+        "sun_azimuth": 234,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "far",
+          "angle": 24.41,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el60/+42",
+        "sun_azimuth": 254,
+        "sun_elevation": 60,
+        "expect": {
+          "branch": "far",
+          "angle": 42.25,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/-58",
+        "sun_azimuth": 154,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "opposite",
+          "angle": 0.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/-38",
+        "sun_azimuth": 174,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "opposite",
+          "angle": 0.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/-18",
+        "sun_azimuth": 194,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "opposite",
+          "angle": 0.0,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/+2",
+        "sun_azimuth": 214,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "far",
+          "angle": 1.07,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/+22",
+        "sun_azimuth": 234,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "far",
+          "angle": 11.46,
+          "blocked": true
+        }
+      },
+      {
+        "time": "el75/+42",
+        "sun_azimuth": 254,
+        "sun_elevation": 75,
+        "expect": {
+          "branch": "far",
+          "angle": 20.33,
+          "blocked": true
+        }
+      }
+    ]
+  }
+]

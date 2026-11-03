@@ -6,48 +6,60 @@ exceeds the maximum. The travel clamp then pins the slats MORE open than the
 blocking limit and the direct beam leaks. With ``opposite_face_fallback`` on,
 the engine closes the slats from the other face instead.
 
-The tests are driven by ``tests/fixtures/louvered_opposite_face_scenarios.json``:
-an array of scenarios, each a roof plus a timeline of sun positions, so a new
-case is a new entry in that file and no new code. Scenario schema::
+The tests are driven by ``tests/fixtures/louvered_opposite_face_scenarios.json``,
+an array of scenarios. Each is a roof at a place on a date; the test computes
+the sun minute by minute over the day (NOAA equations, in
+``tests/louvered_oracle.py``) and runs the engine at every minute. Schema::
 
     {
       "id": "unique-name",
       "description": "what this case is about",
+      "location": {"latitude": 47.5, "longitude": 14.0, "utc_offset_hours": 2},
+      "date": "2026-06-21",
+      "day": {"start": "04:30", "end": "21:30"},   # local time, every minute
       "roof": {
-        "axis_azimuth": 212,              # direction the slats run (compass deg)
+        "axis_azimuth": 212,          # compass direction the slats run along
         "slat_depth_cm": 22, "slat_spacing_cm": 20,
         "tilt_mode": "mode2", "max_slat_angle": 125,   # 0 = the mode's maximum
         "opposite_face_fallback": true, "opposite_face_margin": 5.0
       },
-      "samples": [                         # a timeline, in order
-        {"time": "13:20", "sun_azimuth": 187.9, "sun_elevation": 65.8,
-         "expect": {"branch": "opposite",  # facing | opposite | far | clamped
-                    "angle": 24.55,        # commanded slat angle, degrees
-                    "blocked": true}}      # is the direct sun blocked there
-      ]
+      "expect": {                     # one entry per rotation direction
+        "counterclockwise": {
+          "flips": [{"time": "12:26", "from": "facing", "to": "opposite",
+                     "angle_before": 120.0, "angle_after": 18.0}],
+          "sun_gets_through": []      # [{"from": "12:44", "to": "14:06"}, ...]
+        },
+        "clockwise": {...}
+      }
     }
 
-Every scenario runs for BOTH ways the slats can turn. The drive opens toward the
-side the roof faces; for slats along ``axis_azimuth`` that is either
-``axis − 90°`` ("counterclockwise", the #1223 roof: axis 212°, facing 122°) or
-``axis + 90°`` ("clockwise"). The listed sun positions are for the first; for
-the second they are reflected across the slat axis, which is the same situation
-seen in a mirror, so the same expectations apply. The checks per sample:
+**Rotation direction.** A roof can be built to turn either way. The drive
+opens toward the side the roof faces, which for slats along ``axis_azimuth`` is
+either ``axis − 90°`` ("counterclockwise"; the #1223 roof, facing 122°) or
+``axis + 90°`` ("clockwise", facing 302°). Both run under the SAME sun, so the
+flip happens at a different time of day for each, and each has its own
+expectations in the file.
 
-* **moved at the right time, to the right angle**: the branch and angle at each
-  time match the file (the branch sequence is the timeline of when the slats
-  switch face);
-* **sun blocked**: the independent checker in ``tests/louvered_oracle.py`` says
-  the commanded angle blocks the direct beam (or leaks, for the control
-  scenario that documents the old clamp);
-* **maximally open on either face**: the angle is the most open blocking angle on
-  the face it chose, and a slightly more open angle leaks.
+**A flip** is a minute where the commanded angle jumps by more than
+``FLIP_JUMP_DEG``: the slats swing over to the other face. While they swing,
+sun may get through; that is the only time it may. Per scenario and direction:
+
+* the flips happen at the expected minutes, from and to the expected branch
+  (``facing``, ``opposite``, ``far``, ``clamped``);
+* in a window of minutes before, through and after each flip, the slats are on
+  the right face, block the sun at every minute, and only jump at the flip;
+* at every minute of the day the sun is blocked, except in the expected
+  ``sun_gets_through`` windows (only the control scenario has any);
+* at every minute the slats are as open as they can be on the face they chose,
+  and the engine agrees with the independent checker.
 """
 
 from __future__ import annotations
 
+from functools import cache
 import json
 from pathlib import Path
+from typing import NamedTuple
 
 import pytest
 
@@ -69,120 +81,149 @@ SCENARIO_FILE = (
     / "louvered_opposite_face_scenarios.json"
 )
 SCENARIOS = json.loads(SCENARIO_FILE.read_text())
+BY_ID = {sc["id"]: sc for sc in SCENARIOS}
 
 # Offset from the slat axis to the direction the roof faces.
 DIRECTIONS = {"counterclockwise": -90.0, "clockwise": +90.0}
 
-ANGLE_TOL = 0.05  # engine vs checker: both are exact up to float/bisection error
-FILE_ANGLE_TOL = 0.02  # golden values are stored to two decimals
+MIN_ELEVATION_DEG = 5.0  # below this the sun is ignored (as in the generator)
+FLIP_JUMP_DEG = 30.0  # a larger change in one minute is a flip
+FLIP_WINDOW_MIN = 10  # minutes checked before and after each flip
+STEADY_MOVE_DEG = 5.0  # outside a flip the slats move less than this a minute
+MIN_MINUTES_BETWEEN_FLIPS = 30  # no back-and-forth
+ANGLE_TOL = 0.05  # engine vs checker
+FILE_ANGLE_TOL = 0.2  # file stores angles to one decimal
 OPEN_PROBE_DEG = 0.3  # "slightly more open" for the maximally-open check
 BRANCHES = {"facing", "opposite", "far", "clamped"}
 
 CASES = [
-    pytest.param(sc, name, id=f"{sc['id']}-{name}")
+    pytest.param(sc["id"], name, id=f"{sc['id']}-{name}")
     for sc in SCENARIOS
     for name in DIRECTIONS
 ]
+
+
+class Minute(NamedTuple):
+    """One minute of a scenario: sun, engine result and the checker's view."""
+
+    time: str
+    sun_az: float
+    sun_el: float
+    branch: str
+    angle: float
+    blocked: bool
+    tan_s: float
+    want_branch: str
+    want_angle: float
 
 
 def _facing(roof: dict, direction: str) -> float:
     return (roof["axis_azimuth"] + DIRECTIONS[direction]) % 360.0
 
 
-def _sun_azimuth(roof: dict, sample: dict, direction: str) -> float:
-    """Return the file's sun azimuth, reflected across the slat axis for 'clockwise'."""
-    az = sample["sun_azimuth"]
-    if direction == "counterclockwise":
-        return az
-    return (2.0 * roof["axis_azimuth"] - az) % 360.0
-
-
-def _engine(roof: dict, sun_az: float, sun_el: float, direction: str):
-    return build_louvered_roof_cover(
-        sol_azi=sun_az,
-        sol_elev=sun_el,
-        roof_pitch=0.0,
-        slat_distance=roof["slat_spacing_cm"] / 100.0,
-        depth=roof["slat_depth_cm"] / 100.0,
-        mode=roof["tilt_mode"],
-        win_azi=_facing(roof, direction),
-        max_slat_angle=roof["max_slat_angle"],
-        opposite_face_fallback=roof["opposite_face_fallback"],
-        opposite_face_margin=roof["opposite_face_margin"],
-    )
-
-
 def _limit(roof: dict) -> float:
     return oracle.travel(roof["tilt_mode"], roof["max_slat_angle"])
 
 
-def _run(roof: dict, sample: dict, direction: str) -> tuple[str, float, object]:
-    """Engine's ``(branch, angle, cover)`` for one sample."""
-    cover = _engine(
-        roof,
-        _sun_azimuth(roof, sample, direction),
-        sample["sun_elevation"],
-        direction,
-    )
-    angle = cover.calculate_position()
+def _d_eff(roof: dict) -> float:
+    return oracle.effective_depth(roof["slat_depth_cm"], roof["slat_spacing_cm"])
+
+
+def _engine_branch(cover, angle: float, blocked: bool, limit: float) -> str:
     trace = cover._last_calc_details
     if trace["louvered_far_side_branch"]:
-        branch = "far"
-    elif trace[TRACE_KEY_OPPOSITE_FACE_FALLBACK]:
-        branch = "opposite"
-    elif angle == pytest.approx(_limit(roof)) and not oracle.blocks(
-        angle,
-        oracle.sun_tangent(
-            _sun_azimuth(roof, sample, direction),
-            sample["sun_elevation"],
-            _facing(roof, direction),
-        ),
-        oracle.effective_depth(roof["slat_depth_cm"], roof["slat_spacing_cm"]),
-        roof["slat_spacing_cm"],
+        return "far"
+    if trace[TRACE_KEY_OPPOSITE_FACE_FALLBACK]:
+        return "opposite"
+    if abs(angle - limit) < 1e-6 and not blocked:
+        return "clamped"
+    return "facing"
+
+
+@cache
+def _day(scenario_id: str, direction: str) -> tuple[Minute, ...]:
+    """Run the engine and the checker at every minute of the scenario's day."""
+    sc = BY_ID[scenario_id]
+    roof, loc = sc["roof"], sc["location"]
+    facing = _facing(roof, direction)
+    limit = _limit(roof)
+    out = []
+    for label, utc in oracle.local_minutes(
+        sc["date"], sc["day"]["start"], sc["day"]["end"], loc["utc_offset_hours"]
     ):
-        branch = "clamped"
-    else:
-        branch = "facing"
-    return branch, angle, cover
+        az, el = oracle.sun_position(loc["latitude"], loc["longitude"], utc)
+        if el < MIN_ELEVATION_DEG:
+            continue
+        cover = build_louvered_roof_cover(
+            sol_azi=az,
+            sol_elev=el,
+            roof_pitch=0.0,
+            slat_distance=roof["slat_spacing_cm"] / 100.0,
+            depth=roof["slat_depth_cm"] / 100.0,
+            mode=roof["tilt_mode"],
+            win_azi=facing,
+            max_slat_angle=roof["max_slat_angle"],
+            opposite_face_fallback=roof["opposite_face_fallback"],
+            opposite_face_margin=roof["opposite_face_margin"],
+        )
+        angle = cover.calculate_position()
+        tan_s = oracle.sun_tangent(az, el, facing)
+        blocked = oracle.blocks(angle, tan_s, _d_eff(roof), roof["slat_spacing_cm"])
+        want_branch, want_angle = oracle.expected_pose(
+            sun_az=az,
+            sun_el=el,
+            facing_az=facing,
+            depth=roof["slat_depth_cm"],
+            spacing=roof["slat_spacing_cm"],
+            limit=limit,
+            fallback=roof["opposite_face_fallback"],
+            margin=roof["opposite_face_margin"],
+        )
+        out.append(
+            Minute(
+                label,
+                az,
+                el,
+                _engine_branch(cover, angle, blocked, limit),
+                angle,
+                blocked,
+                tan_s,
+                want_branch,
+                want_angle,
+            )
+        )
+    return tuple(out)
 
 
-def _checker_inputs(roof: dict, sample: dict, direction: str) -> dict:
-    return {
-        "sun_az": _sun_azimuth(roof, sample, direction),
-        "sun_el": sample["sun_elevation"],
-        "facing_az": _facing(roof, direction),
-        "depth": roof["slat_depth_cm"],
-        "spacing": roof["slat_spacing_cm"],
-        "limit": _limit(roof),
-        "fallback": roof["opposite_face_fallback"],
-        "margin": roof["opposite_face_margin"],
-    }
+def _flip_indices(day: tuple[Minute, ...]) -> list[int]:
+    return [
+        i
+        for i in range(1, len(day))
+        if abs(day[i].angle - day[i - 1].angle) > FLIP_JUMP_DEG
+    ]
 
 
-def _blocks_at(roof: dict, sample: dict, direction: str, angle: float) -> bool:
-    tan_s = oracle.sun_tangent(
-        _sun_azimuth(roof, sample, direction),
-        sample["sun_elevation"],
-        _facing(roof, direction),
-    )
-    return oracle.blocks(
-        angle,
-        tan_s,
-        oracle.effective_depth(roof["slat_depth_cm"], roof["slat_spacing_cm"]),
-        roof["slat_spacing_cm"],
-    )
+def _in_windows(time: str, windows: list[dict]) -> bool:
+    return any(w["from"] <= time <= w["to"] for w in windows)
+
+
+def _minutes(time: str) -> int:
+    h, m = time.split(":")
+    return int(h) * 60 + int(m)
 
 
 class TestScenarioFile:
     """The fixture itself: well-formed, and it exercises what it claims to."""
 
     def test_ids_are_unique(self) -> None:
-        ids = [sc["id"] for sc in SCENARIOS]
-        assert len(ids) == len(set(ids))
+        assert len(BY_ID) == len(SCENARIOS)
 
-    @pytest.mark.parametrize("scenario", SCENARIOS, ids=[s["id"] for s in SCENARIOS])
+    @pytest.mark.parametrize("scenario", SCENARIOS, ids=list(BY_ID))
     def test_entry_is_well_formed(self, scenario: dict) -> None:
         assert scenario["description"]
+        assert {"latitude", "longitude", "utc_offset_hours"} <= set(
+            scenario["location"]
+        )
         assert {
             "axis_azimuth",
             "slat_depth_cm",
@@ -192,111 +233,144 @@ class TestScenarioFile:
             "opposite_face_fallback",
             "opposite_face_margin",
         } <= set(scenario["roof"])
-        assert scenario["samples"]
-        for sample in scenario["samples"]:
-            assert sample["expect"]["branch"] in BRANCHES
-            assert 0.0 <= sample["expect"]["angle"] <= 180.0
-            assert isinstance(sample["expect"]["blocked"], bool)
+        assert set(scenario["expect"]) == set(DIRECTIONS)
+        for exp in scenario["expect"].values():
+            for flip in exp["flips"]:
+                assert {flip["from"], flip["to"]} <= BRANCHES
 
-    def test_fallback_is_exercised_in_both_faces_and_the_control_leaks(self) -> None:
-        branches = {s["expect"]["branch"] for sc in SCENARIOS for s in sc["samples"]}
-        assert branches == BRANCHES
-        control = next(
-            sc for sc in SCENARIOS if not sc["roof"]["opposite_face_fallback"]
-        )
-        assert any(not s["expect"]["blocked"] for s in control["samples"])
+    def test_the_control_leaks_and_every_fallback_roof_stays_shaded(self) -> None:
+        for sc in SCENARIOS:
+            leaks = [w for e in sc["expect"].values() for w in e["sun_gets_through"]]
+            if sc["roof"]["opposite_face_fallback"]:
+                assert not leaks, sc["id"]
+            else:
+                assert leaks, sc["id"]
+
+    def test_the_two_rotation_directions_flip_at_different_times(self) -> None:
+        """The point of running both: the flip-over moves to another time of day."""
+        differing = 0
+        for sc in SCENARIOS:
+            # Only fallback flips move; the far/facing flip where the sun crosses
+            # the slat axis happens at the same minute whichever way the roof turns.
+            ccw, cw = (
+                [
+                    f["time"]
+                    for f in sc["expect"][d]["flips"]
+                    if "opposite" in (f["from"], f["to"])
+                ]
+                for d in ("counterclockwise", "clockwise")
+            )
+            if sc["roof"]["opposite_face_fallback"] and (ccw or cw):
+                assert ccw != cw, sc["id"]
+                differing += 1
+        assert differing >= 10
 
 
-@pytest.mark.parametrize(("scenario", "direction"), CASES)
+@pytest.mark.parametrize(("scenario_id", "direction"), CASES)
 class TestScenarios:
     """Every scenario in the file, for both ways the slats can turn."""
 
-    def test_slats_move_to_the_right_angle_at_the_right_time(
-        self, scenario: dict, direction: str
+    def test_slats_flip_at_the_right_time(
+        self, scenario_id: str, direction: str
     ) -> None:
-        roof = scenario["roof"]
-        problems: list[str] = []
-        prev_engine = prev_file = None
-        for sample in scenario["samples"]:
-            exp = sample["expect"]
-            branch, angle, _ = _run(roof, sample, direction)
-            if branch != exp["branch"]:
-                problems.append(
-                    f"{sample['time']}: took the {branch} branch, expected {exp['branch']}"
-                )
-            elif abs(angle - exp["angle"]) > max(FILE_ANGLE_TOL, ANGLE_TOL):
-                problems.append(
-                    f"{sample['time']}: commanded {angle:.2f}°, expected {exp['angle']:.2f}°"
-                )
-            if prev_engine is not None:
-                moved = abs(angle - prev_engine) > 0.01
-                should_move = abs(exp["angle"] - prev_file) > 0.01
-                if moved != should_move:
-                    problems.append(
-                        f"{sample['time']}: slats {'moved' if moved else 'stayed'}, "
-                        f"expected them to {'move' if should_move else 'stay'}"
-                    )
-            prev_engine, prev_file = angle, exp["angle"]
-        assert not problems, "\n".join(problems)
+        day = _day(scenario_id, direction)
+        got = [
+            {
+                "time": day[i].time,
+                "from": day[i - 1].branch,
+                "to": day[i].branch,
+                "angle_before": day[i - 1].angle,
+                "angle_after": day[i].angle,
+            }
+            for i in _flip_indices(day)
+        ]
+        want = BY_ID[scenario_id]["expect"][direction]["flips"]
+        assert [(f["time"], f["from"], f["to"]) for f in got] == [
+            (f["time"], f["from"], f["to"]) for f in want
+        ]
+        for g, w in zip(got, want, strict=True):
+            assert g["angle_before"] == pytest.approx(
+                w["angle_before"], abs=FILE_ANGLE_TOL
+            ), w["time"]
+            assert g["angle_after"] == pytest.approx(
+                w["angle_after"], abs=FILE_ANGLE_TOL
+            ), w["time"]
 
-    def test_direct_sun_is_blocked_where_expected(
-        self, scenario: dict, direction: str
+    def test_shade_before_through_and_after_each_flip(
+        self, scenario_id: str, direction: str
     ) -> None:
-        roof = scenario["roof"]
-        for sample in scenario["samples"]:
-            _, angle, _ = _run(roof, sample, direction)
-            blocked = _blocks_at(roof, sample, direction, angle)
-            assert blocked == sample["expect"]["blocked"], (
-                f"{sample['time']}: {angle:.2f}° "
-                f"{'blocks' if blocked else 'lets sun through'}"
-            )
+        day = _day(scenario_id, direction)
+        leaks = BY_ID[scenario_id]["expect"][direction]["sun_gets_through"]
+        flips = _flip_indices(day)
+        for i in flips:
+            lo, hi = max(0, i - FLIP_WINDOW_MIN), min(len(day), i + FLIP_WINDOW_MIN + 1)
+            for j in range(lo, hi):
+                m = day[j]
+                if not _in_windows(m.time, leaks):
+                    assert (
+                        m.blocked
+                    ), f"flip at {day[i].time}: sun gets through at {m.time}"
+                if j > lo and j != i:
+                    step = abs(m.angle - day[j - 1].angle)
+                    assert (
+                        step < STEADY_MOVE_DEG
+                    ), f"flip at {day[i].time}: slats jumped {step:.1f}° at {m.time}"
+            # Before the flip the slats sit on one face, after it on the other.
+            assert (day[i - 1].angle > 90.0) != (day[i].angle > 90.0) or (
+                day[i - 1].branch != day[i].branch
+            ), day[i].time
+        for a, b in zip(flips, flips[1:]):
+            gap = _minutes(day[b].time) - _minutes(day[a].time)
+            assert (
+                gap >= MIN_MINUTES_BETWEEN_FLIPS
+            ), f"flipped back after {gap} min at {day[b].time}"
 
-    def test_slats_are_maximally_open_on_the_face_they_chose(
-        self, scenario: dict, direction: str
+    def test_sun_is_blocked_all_day_except_where_expected(
+        self, scenario_id: str, direction: str
     ) -> None:
-        roof = scenario["roof"]
-        d_eff = oracle.effective_depth(roof["slat_depth_cm"], roof["slat_spacing_cm"])
-        spacing = roof["slat_spacing_cm"]
-        for sample in scenario["samples"]:
-            branch, angle, _ = _run(roof, sample, direction)
-            tan_s = oracle.sun_tangent(
-                _sun_azimuth(roof, sample, direction),
-                sample["sun_elevation"],
-                _facing(roof, direction),
-            )
-            where = f"{sample['time']} ({branch})"
-            if branch == "clamped":
-                # Out of reach with no fallback: pinned at the limit, which is
-                # not a blocking pose (the leak this feature exists to fix).
-                assert angle == pytest.approx(_limit(roof)), where
+        day = _day(scenario_id, direction)
+        leaks = BY_ID[scenario_id]["expect"][direction]["sun_gets_through"]
+        wrong = [
+            f"{m.time}: {'blocked' if m.blocked else 'sun gets through'} at {m.angle:.1f}°"
+            for m in day
+            if m.blocked == _in_windows(m.time, leaks)
+        ]
+        assert not wrong, "\n".join(wrong[:20])
+
+    def test_slats_are_maximally_open_every_minute(
+        self, scenario_id: str, direction: str
+    ) -> None:
+        roof = BY_ID[scenario_id]["roof"]
+        d_eff, spacing, limit = _d_eff(roof), roof["slat_spacing_cm"], _limit(roof)
+        for m in _day(scenario_id, direction):
+            where = f"{m.time} ({m.branch}, {m.angle:.2f}°)"
+            if m.branch == "clamped":
+                # Out of reach and no fallback: pinned at the limit, which leaks.
+                assert m.angle == pytest.approx(limit), where
                 assert (
-                    oracle.max_open_angle("up", tan_s, d_eff, spacing, _limit(roof))
-                    is None
+                    oracle.max_open_angle("up", m.tan_s, d_eff, spacing, limit) is None
                 ), where
                 continue
-            face = "up" if branch == "facing" else "down"
-            best = oracle.max_open_angle(face, tan_s, d_eff, spacing, _limit(roof))
+            face = "up" if m.branch == "facing" else "down"
+            best = oracle.max_open_angle(face, m.tan_s, d_eff, spacing, limit)
             assert best is not None, where
-            assert angle == pytest.approx(best, abs=ANGLE_TOL), where
-            # A slightly more open pose on the same face would let sun through.
-            if abs(angle - 90.0) > 1e-6:
-                toward_open = angle + (
-                    OPEN_PROBE_DEG if angle < 90.0 else -OPEN_PROBE_DEG
+            assert m.angle == pytest.approx(best, abs=ANGLE_TOL), where
+            if abs(m.angle - 90.0) > 1e-6:
+                probe = m.angle + (
+                    OPEN_PROBE_DEG if m.angle < 90.0 else -OPEN_PROBE_DEG
                 )
-                assert not oracle.blocks(toward_open, tan_s, d_eff, spacing), where
+                assert not oracle.blocks(probe, m.tan_s, d_eff, spacing), where
 
-    def test_engine_agrees_with_the_independent_checker(
-        self, scenario: dict, direction: str
+    def test_engine_agrees_with_the_independent_checker_every_minute(
+        self, scenario_id: str, direction: str
     ) -> None:
-        """Guards the file's golden values against drifting from the physics."""
-        roof = scenario["roof"]
-        for sample in scenario["samples"]:
-            branch, angle, _ = _run(roof, sample, direction)
-            want_branch, want_angle = oracle.expected_pose(
-                **_checker_inputs(roof, sample, direction)
-            )
-            assert branch == want_branch, sample["time"]
-            assert angle == pytest.approx(want_angle, abs=ANGLE_TOL), sample["time"]
+        wrong = [
+            f"{m.time}: engine {m.branch} {m.angle:.2f}°, "
+            f"checker {m.want_branch} {m.want_angle:.2f}°"
+            for m in _day(scenario_id, direction)
+            if m.branch != m.want_branch or abs(m.angle - m.want_angle) > ANGLE_TOL
+        ]
+        assert not wrong, "\n".join(wrong[:20])
 
 
 class TestOutsideTheScenarioSchema:
